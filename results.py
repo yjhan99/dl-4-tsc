@@ -1,4 +1,3 @@
-import glob
 import itertools
 import os
 import pickle
@@ -22,90 +21,93 @@ def datasets_metrics():
         for architecture in ['mcdcnnM', 'cnnM', 'stresnetM', 'mlpM', 'fcnM', 'encoderM', 'resnetM', 'inceptionM',
                              'mlpLstmM', 'cnnLstmM']:
             for eval_i in range(10):
-                results.append(get_result(architecture, dataset, eval_i, setups))
+                results += get_result(architecture, dataset, eval_i, setups)
 
-    return pd.DataFrame(results, columns=["Dataset", "Architecture", "Evaluation", "Loss", "Loss (std)", "Accuracy",
-                                          "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration",
-                                          "Duration (std)"])
+    return pd.DataFrame(results,
+                        columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy",
+                                 "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration",
+                                 "Duration (std)"])
 
 
 def add_baseline(dataset, results):
-    y_true = []
-    for path in paths_with_results_generator("fcnM", dataset, 0, ["it_00"]):
-        with open(f"{path}/predictions.txt") as f:
-            y_true += [int(x) for x in f.readline().split()]
-    add_majority_baseline(dataset, results, y_true)
-    add_random_baseline(dataset, results, y_true)
+    dataset, n, _ = dataset.split("_")
+    for fold_i in range(int(n)):
+        y_true = []
+        for path in paths_with_results_generator("fcnM", dataset, 0, fold_i, int(n), ["it_00"]):
+            with open(f"{path}/predictions.txt") as f:
+                y_true += [int(x) for x in f.readline().split()]
+        add_majority_baseline(dataset, results, y_true, fold_i)
+        add_random_baseline(dataset, results, y_true, fold_i)
 
 
-def add_random_baseline(dataset, results, y_true):
+def add_random_baseline(dataset, results, y_true, fold_i):
     counter = Counter(y_true)
     accuracy = recall = 1 / len(counter)
     precisions = [x[1] / len(y_true) for x in Counter(y_true).items()]
     f1s = [2 * precision * recall / (precision + recall) for precision in precisions]
     f1 = np.mean(f1s)
-    results.append([dataset, "Random guess", 0, 0, 0, accuracy, np.nan, f1, np.nan])
+    results.append([dataset, "Random guess", fold_i, 0, 0, 0, accuracy, np.nan, f1, np.nan])
 
 
-def add_majority_baseline(dataset, results, y_true):
+def add_majority_baseline(dataset, results, y_true, fold_i):
     y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
-    results.append([dataset, "Majority class", 0, 0, 0, accuracy, np.nan, f1, np.nan])
+    results.append([dataset, "Majority class", fold_i, 0, 0, 0, accuracy, np.nan, f1, np.nan])
 
 
 def get_result(architecture, dataset, eval_i, setups):
-    loss = []
-    accuracy = []
-    f1 = []
-    auc = []
-    duration = []
+    dataset, n, _ = dataset.split("_")
+    results = []
 
-    for path in paths_with_results_generator(architecture, dataset, eval_i, setups):
-        if not os.path.exists(path + "df_metrics.csv"):
-            return [dataset, architecture, eval_i, float("inf"), 0, 0, 0, 0, 0]
-        df_metrics = pd.read_csv(path + "df_metrics.csv")
-        df_best_model = pd.read_csv(path + "df_best_model.csv")
+    for fold_i in range(int(n)):
+        loss = []
+        accuracy = []
+        f1 = []
+        auc = []
+        duration = []
 
-        loss.append(df_best_model["best_model_val_loss"][0])
-        accuracy.append(df_metrics["accuracy"][0])
-        f1.append(df_metrics["f1"][0])
-        auc.append(df_metrics["auc"][0])
-        duration.append(df_metrics["duration"][0])
+        for path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, n, setups):
+            if not os.path.exists(path + "df_metrics.csv"):
+                return [dataset, architecture, eval_i, float("inf"), 0, 0, 0, 0, 0]
+            df_metrics = pd.read_csv(path + "df_metrics.csv")
+            df_best_model = pd.read_csv(path + "df_best_model.csv")
 
-    duration = np.array(duration) / 60
-    return [dataset, architecture, eval_i, np.mean(loss), np.std(loss), np.mean(accuracy), np.std(accuracy),
-            np.mean(f1), np.std(f1), np.mean(auc), np.std(auc), np.mean(duration), np.std(duration)]
+            loss.append(df_best_model["best_model_val_loss"][0])
+            accuracy.append(df_metrics["accuracy"][0])
+            f1.append(df_metrics["f1"][0])
+            auc.append(df_metrics["auc"][0])
+            duration.append(df_metrics["duration"][0])
+
+        duration = np.array(duration) / 60
+        results.append([dataset, architecture, fold_i, eval_i, np.mean(loss), np.std(loss), np.mean(accuracy),
+                        np.std(accuracy), np.mean(f1), np.std(f1), np.mean(auc), np.std(auc), np.mean(duration),
+                        np.std(duration)])
+    return results
 
 
-def paths_with_results_generator(architecture, dataset, eval_i, setups):
-    if "fold" in dataset:
-        dataset, n, _ = dataset.split("_")
-        for i in range(int(n)):
-            for setup in setups:
-                yield f"results/{dataset}_{n}fold_{i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-    else:
-        for setup in setups:
-            yield f"results/{dataset}/tune_{eval_i:02d}/{architecture}/{setup}/"
+def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
+    for setup in setups:
+        yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
-    cunts = {}
+    counts = {}
     results = []
 
     for dataset in ["ASCERTAIN", "DECAF", "Amigos", "WESAD"]:
-        cunts[dataset] = []
+        counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
             if not os.path.exists(path):
                 continue
-            cunts[dataset] += pickle.load(open(path, "rb"))
+            counts[dataset] += pickle.load(open(path, "rb"))
 
-        cunts[dataset] = Counter(cunts[dataset])
+        counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
         for i in range(1, 5):
-            line.append(cunts[dataset][i])
+            line.append(counts[dataset][i])
         results.append(line)
 
     df = pd.DataFrame(results, columns=["Dataset", "LALV", "LAHV", "HALV", "HAHV"])
@@ -135,24 +137,25 @@ def prepare_latex_for_paper(latex, caption, label):
     return latex
 
 
-def classification_metrics_for_evaluation(dataset: str, eval: int, architecture: str):
+def classification_metrics_for_evaluation(dataset: str, eval_list: list, architecture: str):
     metrics = ["precision", "recall", "f1-score", "support"]
     aggregated_classification_reports = {}
 
-    setups_paths = glob.glob(f"results/{dataset}/tune_{eval:02d}/{architecture}/*/")
-    for setup_path in setups_paths:
-        with open(f"{setup_path}/predictions.txt") as f:
-            y_true = [int(x) for x in f.readline().split()]
-            if len(aggregated_classification_reports) == 0:
-                for clas in set(y_true):
-                    aggregated_classification_reports[clas] = {"f1-score": [], "precision": [], "recall": [],
-                                                               "support": []}
+    for fold_i, eval_i in enumerate(eval_list):
+        for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
+                                                       [f"it_{it:02d}" for it in range(5)]):
+            with open(f"{setup_path}/predictions.txt") as f:
+                y_true = [int(x) for x in f.readline().split()]
+                if len(aggregated_classification_reports) == 0:
+                    for clas in set(y_true):
+                        aggregated_classification_reports[clas] = {"f1-score": [], "precision": [], "recall": [],
+                                                                   "support": []}
 
-            y_pred = [int(x) for x in f.readline().split()]
-            report = classification_report(y_true, y_pred, output_dict=True)
-            for clas in aggregated_classification_reports:
-                for metric in metrics:
-                    aggregated_classification_reports[clas][metric].append(report[str(clas)][metric])
+                y_pred = [int(x) for x in f.readline().split()]
+                report = classification_report(y_true, y_pred, output_dict=True)
+                for clas in aggregated_classification_reports:
+                    for metric in metrics:
+                        aggregated_classification_reports[clas][metric].append(report[str(clas)][metric])
 
     result = []
     for clas in aggregated_classification_reports:
@@ -166,14 +169,16 @@ def classification_metrics_for_evaluation(dataset: str, eval: int, architecture:
     return result
 
 
-def print_classification_metrics_for_classes(results):
+def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = []
     for dataset in results.Dataset.unique():
         results_for_dataset = results[
-            (results.Dataset == dataset) & (results.Type == "best_loss") & (results.Architecture != "Random guess") & (
+            (results.Dataset == dataset) & (results.Architecture != "Random guess") & (
                     results.Architecture != "Majority class")]
         best_architecture = results.iloc[results_for_dataset["F1-score"].idxmax()]
-        metrics += classification_metrics_for_evaluation(dataset, best_architecture["Evaluation"],
+
+        metrics += classification_metrics_for_evaluation(dataset,
+                                                         evaluation_df[dataset, best_architecture["Architecture"]],
                                                          best_architecture["Architecture"])
 
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
@@ -193,21 +198,18 @@ def print_classification_metrics_for_classes(results):
 
 
 def metrics_for_best_evaluations():
-    global results, dataset
     results = datasets_metrics()
     best = []
     for dataset in results.Dataset.unique():
         for architecture in results.Architecture.unique():
-            results_for_dataset_arch = results[(results.Dataset == dataset) & (results.Architecture == architecture)]
-            max_loss_id = results_for_dataset_arch["Loss"].idxmin()
-            max_accuracy_id = results_for_dataset_arch["Accuracy"].idxmax()
-            max_f1_id = results_for_dataset_arch["F1"].idxmax()
+            for fold in results.Fold.unique():
+                results_for_dataset_arch = results[(results.Dataset == dataset) & (results.Architecture == architecture)
+                                                   & (results.Fold == fold)]
+                min_loss_id = results_for_dataset_arch["Loss"].idxmin()
+                best_loss_result = results.iloc[min_loss_id]
+                best.append(list(best_loss_result))
 
-            best_loss_result = results.iloc[max_loss_id]
-            best.append(["best_loss"] + list(best_loss_result))
-            best.append(["best_accuracy"] + list(results.iloc[max_accuracy_id]))
-            best.append(["best_f1"] + list(results.iloc[max_f1_id]))
-    return pd.DataFrame(best, columns=["Type", "Dataset", "Architecture", "Evaluation", "Validation loss",
+    return pd.DataFrame(best, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Validation loss",
                                        "Validation loss (std)", "Accuracy", "Accuracy (std)", "F1-score",
                                        "F1-score (std)", "ROC AUC", "ROC AUC (std)", "Duration (min)",
                                        "Duration (std)"])
@@ -221,18 +223,18 @@ def prepare_readable_values(results):
 
 
 def create_file_for_cd_diagram(results):
-    results[(results.Type == "best_loss") & (results.Architecture != "Random guess") & (
-            results.Architecture != "Majority class")].iloc[:, [2, 1, 8]].to_csv(
+    results[(results.Architecture != "Random guess") & (
+            results.Architecture != "Majority class")][["Architecture", "Dataset", "F1-score"]].to_csv(
         "results/resultsForCriticalDiffrencesDiagram.csv", index=False)
 
 
 def print_metrics_for_datasets():
-    global dataset, latex
     for dataset in results.Dataset.unique():
         with pd.option_context("display.float_format", "{:,.2f}".format):
-            latex = results[(results.Dataset == dataset) & (results.Type == "best_loss")]. \
-                        sort_values("F1-score", ascending=False).iloc[:, [2, 6, 7, 8, 9, 10, 11]].to_latex(
-                index=False, column_format="|l|r|r|r|r|r|r|r|r|")
+            latex = results[results.Dataset == dataset]. \
+                sort_values("F1-score", ascending=False)[
+                ["Architecture", "Accuracy", "Accuracy (std)", "F1-score", "F1-score (std)", "ROC AUC",
+                 "ROC AUC (std)"]].to_latex(index=False, column_format="|l|r|r|r|r|r|r|r|r|")
             latex = prepare_latex_for_paper(latex, f"Results for {dataset} ordered by averaged F1-score",
                                             f"tab:{dataset}Results")
             print(latex)
@@ -254,7 +256,12 @@ def print_classes_representation():
 
 if __name__ == '__main__':
     results = metrics_for_best_evaluations()
-    print_classification_metrics_for_classes(results)
+
+    results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
+    evaluation_df = results["Evaluation"].apply(list)
+    results = results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
+
+    print_classification_metrics_for_classes(results, evaluation_df)
     results = prepare_readable_values(results)
 
     create_file_for_cd_diagram(results)

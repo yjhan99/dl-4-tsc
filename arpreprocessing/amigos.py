@@ -7,7 +7,7 @@ from utils.utils import interpolate_for_length
 
 
 class Amigos(Preprocessor):
-    SUBJECTS_IDS = tuple(range(20))
+    SUBJECTS_IDS = tuple(range(40))
     CHANNELS_NAMES = ["ECG_0", "ECG_1", "GSR"] + [f"EEG_{i}" for i in range(14)]
     THRESHOLD = 5
     WINDOWS_SIZE_SEC = 50
@@ -29,10 +29,13 @@ class Amigos(Preprocessor):
             if len(sample_info) < 14:
                 continue
 
-            subject_id = int(sample_info[1])
+            subject_id = int(sample_info[0][1:3]) - 1
             subject = self.subjects[subject_id]
 
             if len(ecg[i][:, 0]) / get_sampling("ECG") < self.WINDOWS_SIZE_SEC:
+                continue
+
+            if len(ecg[i][:, 0]) / get_sampling("ECG") > (10 * 60):
                 continue
 
             if math.isnan(ecg[i][:, 0][0]):
