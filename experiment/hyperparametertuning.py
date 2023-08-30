@@ -16,7 +16,8 @@ from utils.utils import NoSuchClassifier
 def get_search_space(no_channels, classifier_name):
     result = {}
 
-    optimizer_subspace = [hp.randint("lr", -7, -1), hp.choice("decay", [.001, .0001, .00001, 0]),
+    # optimizer_subspace = [hp.randint("lr", -7, -1), hp.choice("decay", [.001, .0001, .00001, 0]),
+    optimizer_subspace = [hp.choice("lr", [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001]), hp.choice("decay", [.001, .0001, .00001, 0]),
                           hp.choice("reduce_lr_factor", [0.5, 0.2, 0.1]), hp.choice("reduce_lr_patience", [5, 10])]
 
     subspace = [hp.choice(f"dense_output_{i:02d}", [250, 500, 1000]) for i in range(no_channels)]

@@ -120,7 +120,7 @@ class Experiment(ABC):
                         os.makedirs(output_directory, exist_ok=True)
 
                         try:
-                            session.run(tf.global_variables_initializer())
+                            session.run(tf.compat.v1.global_variables_initializer())
                             model_init = self.perform_single_experiment(classifier_name, output_directory, setup,
                                                                         iteration, hyperparameters, model_init)
                         except Timeout:
@@ -165,7 +165,8 @@ class Experiment(ABC):
 
 
 def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name):
-    path = "archives/mts_archive/"
+    # path = "archives/mts_archive/"
+    path = "archives/mts_archive"
     dataset = Dataset(dataset_name, None, logger_obj)
     x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
     x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)

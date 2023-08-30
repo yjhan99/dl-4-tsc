@@ -69,11 +69,12 @@ def set_available_gpus(gpu_ids):
 
 
 def get_new_session():
-    config = tf.ConfigProto(allow_soft_placement=True,
+    # config = tf.ConfigProto(allow_soft_placement=True,
+    config = tf.compat.v1.ConfigProto(allow_soft_placement=True,
                             intra_op_parallelism_threads=4,
                             inter_op_parallelism_threads=4)
     config.gpu_options.allow_growth = True
-    return tf.Session(config=config)
+    return tf.compat.v1.Session(config=config)
 
 
 def interpolate_for_length(values, new_length):
