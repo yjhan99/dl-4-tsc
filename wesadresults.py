@@ -18,14 +18,12 @@ def datasets_metrics():
         setups = [f"it_{it:02d}" for it in range(5)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'resnetM']:
+        for architecture in ['fcnM']:
             for eval_i in range(10):
                 results += get_result(architecture, dataset, eval_i, setups)
-
-    return pd.DataFrame(results,
-                        columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy",
-                                 "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration",
-                                 "Duration (std)"])
+    
+    # print(results)
+    return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
 
 
 def add_baseline(dataset, results):
@@ -49,7 +47,8 @@ def add_random_baseline(dataset, results, y_true, fold_i):
 
 
 def add_majority_baseline(dataset, results, y_true, fold_i):
-    y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
+    # y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
+    y_pred = len(y_true) * [scipy.stats.mode(y_true)[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
     results.append([dataset, "Majority class", fold_i, 0, 0, 0, accuracy, np.nan, f1, np.nan])
@@ -68,6 +67,7 @@ def get_result(architecture, dataset, eval_i, setups):
 
         for path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, n, setups):
             if not os.path.exists(path + "df_metrics.csv"):
+                print(path)
                 return [dataset, architecture, eval_i, float("inf"), 0, 0, 0, 0, 0]
             df_metrics = pd.read_csv(path + "df_metrics.csv")
             df_best_model = pd.read_csv(path + "df_best_model.csv")
@@ -94,7 +94,7 @@ def count_classes_representation():
     counts = {}
     results = []
 
-    for dataset in ["ASCERTAIN", "DECAF", "Amigos", "WESAD"]:
+    for dataset in ["WESAD"]:
         counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
@@ -105,11 +105,13 @@ def count_classes_representation():
         counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
-        for i in range(1, 5):
+        # for i in range(1, 5):
+        for i in range(1, 4):
             line.append(counts[dataset][i])
         results.append(line)
 
-    df = pd.DataFrame(results, columns=["Dataset", "LALV", "LAHV", "HALV", "HAHV"])
+    # df = pd.DataFrame(results, columns=["Dataset", "LALV", "LAHV", "HALV", "HAHV"])
+    df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
     return df
 
 
@@ -178,7 +180,8 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
+    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]
