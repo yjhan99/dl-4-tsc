@@ -18,7 +18,7 @@ def datasets_metrics():
         setups = [f"it_{it:02d}" for it in range(5)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM']:
+        for architecture in ['fcnM', 'cnnM']:
             for eval_i in range(10):
                 results += get_result(architecture, dataset, eval_i, setups)
     
