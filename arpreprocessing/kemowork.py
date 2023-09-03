@@ -22,30 +22,39 @@ class KEmoWork(Preprocessor):
 
 
 def original_sampling(channel_name: str):
-    if channel_name.startswith("chest"):
-        return 700
-    return get_empatica_sampling(channel_name[len("wrist_"):])
+    if channel_name.startswith("EDA"):
+        return 4
+    if channel_name.startswith("EEG"):
+        return 256
+    if channel_name.startswith("TEMP"):
+        return 4
+    if channel_name.startswith("ACC"):
+        return 32
+    if channel_name.startswith("BVP"):
+        return 64
+    if channel_name.startswith("ECG"):
+        return 130
+    if channel_name == "label":
+        return 10
+    raise NoSuchSignal(channel_name)
 
 
 def target_sampling(channel_name: str):
-    if channel_name.startswith("chest_ECG"):
-        return 70
-    if channel_name.startswith("chest_ACC"):
-        return 10
-    if channel_name.startswith("chest_EMG"):
-        return 10
-    if channel_name.startswith("chest_EDA"):
-        return 3.5
-    if channel_name.startswith("chest_Temp"):
-        return 3.5
-    if channel_name.startswith("chest_Resp"):
-        return 3.5
-    if channel_name.startswith("wrist_ACC"):
+    if channel_name.startswith("EDA"):
+        return 4
+    if channel_name.startswith("EEG"):
+        return 128
+        # TODO: Why?
+    if channel_name.startswith("TEMP"):
+        return 4
+    if channel_name.startswith("ACC"):
         return 8
-    if channel_name.startswith("wrist"):
-        return original_sampling(channel_name)
+    if channel_name.startswith("BVP"):
+        return 64
+    if channel_name.startswith("ECG"):
+        return 65
     if channel_name == "label":
-        return 700
+        return 10
     raise NoSuchSignal(channel_name)
 
 
@@ -87,12 +96,16 @@ class KEmoWorkSubject(Subject):
     @staticmethod
     def restructure_data(data):
         new_data = {'label': np.array(data['label']), "signal": {}}
-        for device in data['signal']:
-            for type in data['signal'][device]:
-                for i in range(len(data['signal'][device][type][0])):
-                    signal_name = '_'.join([device, type, str(i)])
-                    signal = np.array([x[i] for x in data['signal'][device][type]])
-                    new_data["signal"][signal_name] = signal
+        # TODO: label data how?
+        for sensor in data['signal']:
+            # for type in data['signal'][sensor]:
+            # for i in range(len(data['signal'][sensor][type][0])):
+            for i in range(len(data['signal'][sensor][0])):
+                # signal_name = '_'.join([sensor, type, str(i)])
+                signal_name = '_'.join([sensor, str(i)])
+                # signal = np.array([x[i] for x in data['signal'][sensor][type]])
+                signal = np.array([x[i] for x in data['signal'][sensor]])
+                new_data["signal"][signal_name] = signal
         return new_data
 
     def _filter_all_signals(self, data):
@@ -109,6 +122,7 @@ class KEmoWorkSubject(Subject):
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
         for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120):
+            # TODO: what is 120, 240?
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 
