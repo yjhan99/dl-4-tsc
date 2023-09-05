@@ -43,7 +43,7 @@ def target_sampling(channel_name: str):
     if channel_name.startswith("EDA"):
         return 4
     if channel_name.startswith("EEG"):
-        return 128
+        return 64
     if channel_name.startswith("TEMP"):
         return 4
     if channel_name.startswith("ACC"):
