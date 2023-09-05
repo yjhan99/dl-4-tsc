@@ -172,7 +172,10 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
     x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
     x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
     x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
-    x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
+    print(len(x_val))
+    print(np.array(x_val[0]).shape)
+    print(x_val[1])
+    # x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
     input_shapes, nb_classes, y_val, y_train, y_test, y_true = prepare_data(x_train, y_train, y_val, y_test)
     ndft_arr = [get_ndft(x) for x in sampling_test]

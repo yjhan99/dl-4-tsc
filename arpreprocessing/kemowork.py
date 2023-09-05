@@ -117,7 +117,8 @@ class KEmoWorkSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["EDA_0"]) - 4*10, 4*1):
+        # for i in range(0, len(data["signal"]["EDA_0"]) - 4*10, 4*1): #10sec*4Hz window and 1sec*4Hz sliding
+        for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             personalized_threshold = np.mean(data["label"])
             label_window_mean = np.mean(data["label"][first_index:last_index])

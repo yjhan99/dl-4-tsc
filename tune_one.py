@@ -5,6 +5,7 @@ from experiment.amigosexperiment import AmigosExperimentNFold
 from experiment.decafexperiment import DecafExperimentNFold
 from experiment.hyperparametertuning import HyperparameterTuning
 from experiment.wesadexperiment import WesadExperimentNFold
+from experiment.kemoworkexperiment import KEmoWorkExperimentNFold
 from utils.loggerwrapper import GLOBAL_LOGGER
 from utils.utils import set_available_gpus
 
@@ -19,7 +20,7 @@ def get_dataset(name):
     if name.startswith("wesad_fold_"):
         return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("kemowork_fold_"):
-        return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
+        return KEmoWorkExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     raise Exception(f"No such dataset/experiment as {name}")
 
 
