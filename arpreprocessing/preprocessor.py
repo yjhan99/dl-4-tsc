@@ -7,11 +7,12 @@ from arpreprocessing.subject import Subject
 
 
 class Preprocessor(ABC):
-    def __init__(self, logger, path, name, channels_names, get_sampling_fn, subject_cls=Subject):
+    def __init__(self, logger, path, label_type, name, channels_names, get_sampling_fn, subject_cls=Subject):
         self._logger = logger
         self._path = path
+        self._label_type = label_type
         self._name = name
-        self.subjects = [subject_cls(self._logger, self._path, id_, channels_names, get_sampling_fn) for id_ in
+        self.subjects = [subject_cls(self._logger, self._path, self._label_type, id_, channels_names, get_sampling_fn) for id_ in
                          self.get_subjects_ids()]
 
     def get_dataset(self):

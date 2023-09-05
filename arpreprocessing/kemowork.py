@@ -14,8 +14,8 @@ class KEmoWork(Preprocessor):
     SUBJECTS_IDS = [1,2,3,4,8,10,12,13,14,16,18,19,20,21,22,23,25,26,27]
     CHANNELS_NAMES = ['muse', 'e4_acc', 'e4_bvp', 'e4_eda', 'e4_temp', 'polar_ecg']
 
-    def __init__(self, logger, path):
-        Preprocessor.__init__(self, logger, path, "KEmoWork", [], None, subject_cls=KEmoWorkSubject)
+    def __init__(self, logger, path, label_type):
+        Preprocessor.__init__(self, logger, path, label_type, "KEmoWork", [], None, subject_cls=KEmoWorkSubject)
 
     def get_subjects_ids(self):
         return self.SUBJECTS_IDS
@@ -44,7 +44,6 @@ def target_sampling(channel_name: str):
         return 4
     if channel_name.startswith("EEG"):
         return 128
-        # TODO: Why?
     if channel_name.startswith("TEMP"):
         return 4
     if channel_name.startswith("ACC"):
@@ -59,10 +58,11 @@ def target_sampling(channel_name: str):
 
 
 class KEmoWorkSubject(Subject):
-    def __init__(self, logger, path, subject_id, channels_names, get_sampling_fn):
-        Subject.__init__(self, logger, path, subject_id, channels_names, get_sampling_fn)
+    def __init__(self, logger, path, label_type, subject_id, channels_names, get_sampling_fn):
+        Subject.__init__(self, logger, path, label_type, subject_id, channels_names, get_sampling_fn)
         self._logger = logger
         self._path = path
+        self._label_type = label_type
         self.id = subject_id
 
         data = self._load_subject_data_from_file()
@@ -88,22 +88,18 @@ class KEmoWorkSubject(Subject):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        signals = self.restructure_data(data)
+        signals = self.restructure_data(data, self._label_type)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals
 
     @staticmethod
-    def restructure_data(data):
-        new_data = {'label': np.array(data['label']), "signal": {}}
-        # TODO: label data how?
+    def restructure_data(data, label_type):
+        new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
+        # label data okay?
         for sensor in data['signal']:
-            # for type in data['signal'][sensor]:
-            # for i in range(len(data['signal'][sensor][type][0])):
             for i in range(len(data['signal'][sensor][0])):
-                # signal_name = '_'.join([sensor, type, str(i)])
                 signal_name = '_'.join([sensor, str(i)])
-                # signal = np.array([x[i] for x in data['signal'][sensor][type]])
                 signal = np.array([x[i] for x in data['signal'][sensor]])
                 new_data["signal"][signal_name] = signal
         return new_data
@@ -121,8 +117,7 @@ class KEmoWorkSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120):
-            # TODO: what is 120, 240?
+        for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120):
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 

@@ -13,11 +13,6 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     config.read("config.ini")
 
-    # config_path = pathlib.Path(__file__).parent.absolute() / "config.ini"
-    # print(pathlib.Path(__file__).parent.absolute())
-    # config = configparser.ConfigParser()
-    # config.read(config_path)
-
     # dataset = Decaf(GLOBAL_LOGGER, config['Paths']['decaf_dir']).get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
@@ -27,8 +22,8 @@ if __name__ == '__main__':
     # dataset = Amigos(GLOBAL_LOGGER, config['Paths']['amigos_dir']).get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
-    dataset.save(config['Paths']['mts_out_dir'])
+    # dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
+    # dataset.save(config['Paths']['mts_out_dir'])
 
-    dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'].get_dataset())
+    dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'], 'STRESS').get_dataset()
     dataset.save(config['Paths']['mts_out_dir'])
