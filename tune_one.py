@@ -18,6 +18,8 @@ def get_dataset(name):
         return AscertainExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("wesad_fold_"):
         return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
+    if name.startswith("kemowork_fold_"):
+        return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     raise Exception(f"No such dataset/experiment as {name}")
 
 

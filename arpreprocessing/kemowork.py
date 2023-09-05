@@ -95,8 +95,8 @@ class KEmoWorkSubject(Subject):
 
     @staticmethod
     def restructure_data(data, label_type):
-        new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
-        # label data okay?
+        # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
+        new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
         for sensor in data['signal']:
             for i in range(len(data['signal'][sensor][0])):
                 signal_name = '_'.join([sensor, str(i)])
@@ -117,11 +117,12 @@ class KEmoWorkSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120):
+        for i in range(0, len(data["signal"]["EDA_0"]) - 4*10, 4*1):
             first_index, last_index = self._indexes_for_signal(i, "label")
-            label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
+            personalized_threshold = np.mean(data["label"])
+            label_window_mean = np.mean(data["label"][first_index:last_index])
 
-            if label_id not in [1, 2, 3]:
+            if label_window_mean not in range(0,20):
                 continue
 
             channel_id = 0
@@ -130,7 +131,7 @@ class KEmoWorkSubject(Subject):
                 self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
                 channel_id += 1
 
-            self.y.append(label_id)
+            self.y.append(np.float64(1.0)) if label_window_mean > personalized_threshold else self.y.append(np.float64(0.0))
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
 
@@ -138,5 +139,5 @@ class KEmoWorkSubject(Subject):
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
         first_index = int((i * freq) // 4)
-        window_size = int(60 * freq)
+        window_size = int(10 * freq)
         return first_index, first_index + window_size
