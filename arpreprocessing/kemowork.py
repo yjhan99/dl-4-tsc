@@ -2,20 +2,20 @@ import itertools as it
 import pickle
 
 import numpy as np
-import scipy.stats
+# import scipy.stats
 
 from arpreprocessing.helpers import filter_signal, get_empatica_sampling
-from arpreprocessing.preprocessor import Preprocessor
+from arpreprocessing.preprocessorlabel import PreprocessorLabel
 from arpreprocessing.signal import Signal, NoSuchSignal
-from arpreprocessing.subject import Subject
+from arpreprocessing.subjectlabel import SubjectLabel
 
 
-class KEmoWork(Preprocessor):
+class KEmoWork(PreprocessorLabel):
     SUBJECTS_IDS = [1,2,3,4,8,10,12,13,14,16,18,19,20,21,22,23,25,26,27]
     CHANNELS_NAMES = ['muse', 'e4_acc', 'e4_bvp', 'e4_eda', 'e4_temp', 'polar_ecg']
 
     def __init__(self, logger, path, label_type):
-        Preprocessor.__init__(self, logger, path, label_type, "KEmoWork", [], None, subject_cls=KEmoWorkSubject)
+        PreprocessorLabel.__init__(self, logger, path, label_type, "KEmoWork", [], None, subject_cls=KEmoWorkSubject)
 
     def get_subjects_ids(self):
         return self.SUBJECTS_IDS
@@ -57,9 +57,9 @@ def target_sampling(channel_name: str):
     raise NoSuchSignal(channel_name)
 
 
-class KEmoWorkSubject(Subject):
+class KEmoWorkSubject(SubjectLabel):
     def __init__(self, logger, path, label_type, subject_id, channels_names, get_sampling_fn):
-        Subject.__init__(self, logger, path, label_type, subject_id, channels_names, get_sampling_fn)
+        SubjectLabel.__init__(self, logger, path, label_type, subject_id, channels_names, get_sampling_fn)
         self._logger = logger
         self._path = path
         self._label_type = label_type

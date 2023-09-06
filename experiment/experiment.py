@@ -219,12 +219,30 @@ def get_batch_size(classifier_name):
     return 32
 
 
+# def n_fold_split(subject_ids, n, seed=5):
+#     result = []
+
+#     random.seed(seed)
+#     subject_ids = list(subject_ids)
+#     random.shuffle(subject_ids)
+
+#     test_sets = [subject_ids[i::n] for i in range(n)]
+
+#     for test_set in test_sets:
+#         rest = [x for x in subject_ids if x not in test_set]
+#         val_set = random.sample(rest, math.ceil(len(rest) / 5))
+#         train_set = [x for x in rest if x not in val_set]
+#         result.append({"train": train_set, "val": val_set, "test": test_set})
+
+#     random.seed()
+#     return result
+
 def n_fold_split(subject_ids, n, seed=5):
     result = []
 
     random.seed(seed)
     subject_ids = list(subject_ids)
-    random.shuffle(subject_ids)
+    # random.shuffle(subject_ids)
 
     test_sets = [subject_ids[i::n] for i in range(n)]
 
