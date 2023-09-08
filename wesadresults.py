@@ -14,15 +14,15 @@ WESAD_SUBJECTS = list(itertools.chain(range(2, 12), range(13, 18)))
 def datasets_metrics():
     results = []
 
-    for dataset in ["WESAD_5_fold"]:
-        setups = [f"it_{it:02d}" for it in range(5)]
+    for dataset in ["WESAD_15_fold"]:
+        # setups = [f"it_{it:02d}" for it in range(5)]
+        setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
         for architecture in ['fcnM', 'cnnM', 'mlpLstmM', 'resnetM']:
-            for eval_i in range(10):
+            # for eval_i in range(10):
+            for eval_i in range(5):
                 results += get_result(architecture, dataset, eval_i, setups)
-    
-    # print(results)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
 
 
@@ -138,8 +138,10 @@ def classification_metrics_for_evaluation(dataset: str, eval_list: list, archite
     aggregated_classification_reports = {}
 
     for fold_i, eval_i in enumerate(eval_list):
-        for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
-                                                       [f"it_{it:02d}" for it in range(5)]):
+        # for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
+        for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 15,
+                                                    #    [f"it_{it:02d}" for it in range(5)]):
+                                                       [f"it_{it:02d}" for it in range(1)]):
             with open(f"{setup_path}/predictions.txt") as f:
                 y_true = [int(x) for x in f.readline().split()]
                 if len(aggregated_classification_reports) == 0:
@@ -186,13 +188,31 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]
         column_format = "|l|l" + ((len(columns) - 2) * "|r") + "|"
-        caption = "caption"
+        caption = "Classification metrics for classes"
         label = "tab:metricsForClasses"
 
         latex = metrics.iloc[:, columns].to_latex(index=False, column_format=column_format)
         latex = prepare_latex_for_paper(latex, caption, label)
         print(latex)
 
+def print_classification_metrics_for_LOSO(results):
+    temp_results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
+    temp_results = temp_results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
+    # metrics = []
+    for dataset in temp_results.Dataset.unique():
+        results_for_dataset = temp_results[
+            (temp_results.Dataset == dataset) & (temp_results.Architecture != "Random guess") & (
+                    temp_results.Architecture != "Majority class")]
+        best_architecture = temp_results.iloc[results_for_dataset["F1-score"].idxmax()]["Architecture"]
+    
+    best_results = results[(results.Architecture == best_architecture) | (results.Architecture == "Majority class")]
+    best_results = best_results[["Architecture", "Fold", "Accuracy", "F1-score", "ROC AUC"]]
+
+    with pd.option_context("display.float_format", "{:,.2f}".format):
+        latex = prepare_latex_for_paper(best_results.to_latex(index=False, column_format="|l|l|r|r|r|"),
+                                        f"Best performing model for WESAD in detail", f"tab:datasetsClassesLOSO")
+                
+        print(latex)
 
 def metrics_for_best_evaluations():
     results = datasets_metrics()
@@ -219,10 +239,16 @@ def prepare_readable_values(results):
     return results
 
 
-def create_file_for_cd_diagram(results):
+def create_file_for_cd_diagram(results, dataset_name):
     results[(results.Architecture != "Random guess") & (
             results.Architecture != "Majority class")][["Architecture", "Dataset", "F1-score"]].to_csv(
-        "results/resultsForCriticalDiffrencesDiagram.csv", index=False)
+        f"csvresults/{dataset_name}/resultsForCriticalDiffrencesDiagram.csv", index=False)
+    
+def create_file_for_LOSO(results, dataset_name):
+    results[["Dataset", "Architecture", "Fold", "Evaluation", "Validation loss",
+"Validation loss (std)", "Accuracy", "Accuracy (std)", "F1-score",
+"F1-score (std)", "ROC AUC", "ROC AUC (std)", "Duration (min)", "Duration (std)"]].to_csv(
+       f"csvresults/{dataset_name}/resultsForLOSO.csv", index=False)
 
 
 def print_metrics_for_datasets():
@@ -241,7 +267,8 @@ def print_classes_representation():
     df = count_classes_representation()
     latex = prepare_latex_for_paper(df.to_latex(index=False, column_format="|l|r|r|r|r|"),
                                     f"Classes balance in datasets", f"tab:datasetsClassesBalance")
-    print(latex)
+    # # This prints out the exact number of data in each class
+    # print(latex)
 
     df = df.set_index("Dataset")
     res = df.div(df.sum(axis=1), axis=0) * 100
@@ -253,15 +280,22 @@ def print_classes_representation():
 
 if __name__ == '__main__':
     results = metrics_for_best_evaluations()
+    create_file_for_LOSO(results, "WESAD")
+
+    # This prints out detailed LOSO classification metrics for the best performing (highest F1 score) model
+    print_classification_metrics_for_LOSO(results)
 
     results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
     evaluation_df = results["Evaluation"].apply(list)
+
     results = results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
 
-    print_classification_metrics_for_classes(results, evaluation_df)
+    # # This prints out classification metrics for each class using the best performing (highest F1 score) model
+    # print_classification_metrics_for_classes(results, evaluation_df)
+
     results = prepare_readable_values(results)
 
-    create_file_for_cd_diagram(results)
+    create_file_for_cd_diagram(results, "WESAD")
 
     print_metrics_for_datasets()
 

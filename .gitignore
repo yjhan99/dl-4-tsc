@@ -1,5 +1,6 @@
 # Added by yjhan
 results
+csvresults
 *.pkl
 
 # Byte-compiled / optimized / DLL files
