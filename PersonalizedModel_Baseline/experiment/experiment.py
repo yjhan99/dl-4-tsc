@@ -8,7 +8,7 @@ import tensorflow as tf
 from filelock import Timeout, FileLock
 from tensorflow import Graph
 
-from arpreprocessing.dataset import Dataset 
+from arpreprocessing.dataset import Dataset
 from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
 from multimodal_classfiers.encoder import ClassifierEncoder
 from multimodal_classfiers.fcn import ClassifierFcn
