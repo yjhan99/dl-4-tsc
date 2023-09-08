@@ -7,7 +7,7 @@ from arpreprocessing.ascertain import Ascertain
 from arpreprocessing.decaf import Decaf
 from arpreprocessing.wesad import Wesad
 from arpreprocessing.kemowork import KEmoWork
-from utils.loggerwrapper import GLOBAL_LOGGER
+from GeneralizedModel.utils.loggerwrapper import GLOBAL_LOGGER
 
 if __name__ == '__main__':
     config = configparser.ConfigParser()
