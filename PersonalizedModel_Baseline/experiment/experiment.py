@@ -164,13 +164,57 @@ class Experiment(ABC):
             os.remove(best_model_path)
 
 
-def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name):
-    # path = "archives/mts_archive/"
+def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name, seed=5):
     path = "archives/mts_archive"
     dataset = Dataset(dataset_name, None, logger_obj)
-    x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
-    x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
-    x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
+    # # For Baseline Model (User specific)
+    x, y, sampling_rate = dataset.load(path, test_ids, channels_ids)
+
+    # print('before')
+    # print(len(x[0]))
+    # print(np.array(x[0]).shape)
+
+    random.seed(seed)
+    
+    x_test, x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+    y_test, y_val, y_train = [], [], []
+    sampling_test, sampling_val, sampling_train = sampling_rate, sampling_rate, sampling_rate
+
+    for channel_id in range(len(channels_ids)):
+        signal = x[channel_id]
+
+        num_rows = len(signal)
+        split_size = num_rows // 5
+
+        combined_list = list(zip(signal, y))
+        random.shuffle(combined_list)
+        shuffled_signal, shuffled_y = zip(*combined_list)
+
+        for i in range(split_size):
+            x_test[channel_id].append(shuffled_signal[i])
+        for i in range(split_size, split_size*2):
+            x_val[channel_id].append(shuffled_signal[i])
+        for i in range(split_size*2,num_rows):
+            x_train[channel_id].append(shuffled_signal[i])
+
+    for i in range(split_size):
+        y_test.append(shuffled_y[i])
+    for i in range(split_size, split_size*2):
+        y_val.append(shuffled_y[i])
+    for i in range(split_size*2,num_rows):
+        y_train.append(shuffled_y[i])
+    
+
+    random.seed()
+
+    # print('after')
+    # print(len(x_train[0]))
+    # print(np.array(x_train[0]).shape)
+    print(len(y_test))
+    
+    # x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
+    # x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
+    # x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
     x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
@@ -227,10 +271,7 @@ def n_fold_split(subject_ids, n, seed=5):
     test_sets = [subject_ids[i::n] for i in range(n)]
 
     for test_set in test_sets:
-        rest = [x for x in subject_ids if x not in test_set]
-        val_set = random.sample(rest, math.ceil(len(rest) / 5))
-        train_set = [x for x in rest if x not in val_set]
-        result.append({"train": train_set, "val": val_set, "test": test_set})
+        result.append({"train": test_set, "val": test_set, "test": test_set})
 
     random.seed()
     return result
@@ -244,4 +285,4 @@ def prepare_experimental_setups_n_iterations(self_experiment: Experiment, train_
     for i in range(iterations):
         self_experiment.experimental_setups.append(
             get_experimental_setup(self_experiment.logger_obj, tuple(range(self_experiment.no_channels)),
-                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name))
+                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name, seed=5))
