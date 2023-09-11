@@ -27,8 +27,11 @@ class ClassifierTimeCnn(Classifier):
                                         padding=padding, activation='relu')(input_layer)
             conv1 = keras.layers.AveragePooling1D(pool_size=3)(conv1)
 
+            # conv2 = keras.layers.Conv1D(filters=int(filters_multipliers[channel_id] * 12), kernel_size=kernel_size,
+            #                             padding=padding, activation='relu')(conv1)
+            
             conv2 = keras.layers.Conv1D(filters=int(filters_multipliers[channel_id] * 12), kernel_size=kernel_size,
-                                        padding=padding, activation='relu')(conv1)
+                                        padding='same', activation='relu')(conv1)
             conv2 = keras.layers.AveragePooling1D(pool_size=3)(conv2)
 
             flatten_layer = keras.layers.Flatten()(conv2)
