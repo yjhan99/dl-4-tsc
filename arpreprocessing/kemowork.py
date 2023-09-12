@@ -117,9 +117,8 @@ class KEmoWorkSubject(SubjectLabel):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        # TODO: window 사이즈를 바꾸면 experiment.py에서 np.exand_dims를 할때 axisError가 남.. dim은 변한게 없는데 왜 나는지는 정말 모르겠음ㅠ
-        # for i in range(0, len(data["signal"]["EDA_0"]) - 40, 20): #10sec*4Hz window and 5sec*4Hz sliding
-        for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
+        for i in range(0, len(data["signal"]["EDA_0"]) - 40, 20): #10sec*4Hz window and 5sec*4Hz sliding
+        # for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             personalized_threshold = np.mean(data["label"])
 
@@ -131,9 +130,12 @@ class KEmoWorkSubject(SubjectLabel):
             channel_id = 0
             for signal in data["signal"]:
                 first_index, last_index = self._indexes_for_signal(i, signal)
-                self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
+                if len(data["signal"][signal][first_index:last_index]) == 10*target_sampling(signal):
+                    self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
+                else: # Because of subject 8 and 22
+                    self.x[channel_id].data.append(self.x[channel_id].data[-1])
                 channel_id += 1
-
+            
             self.y.append(np.float64(1.0)) if label_window_mean > personalized_threshold else self.y.append(np.float64(0.0))
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
@@ -142,6 +144,6 @@ class KEmoWorkSubject(SubjectLabel):
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
         first_index = int((i * freq) // 4)
-        # window_size = int(10 * freq) # For 10sec window
-        window_size = int(60 * freq) # For 60sec window
+        window_size = int(10 * freq) # For 10sec window
+        # window_size = int(60 * freq) # For 60sec window
         return first_index, first_index + window_size
