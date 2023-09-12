@@ -1,6 +1,7 @@
 # Added by yjhan
 results
 csvresults
+results_cluster
 *.pkl
 *.DS_Store
 *.ipynb
