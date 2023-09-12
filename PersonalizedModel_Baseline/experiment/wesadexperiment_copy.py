@@ -17,13 +17,14 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
         with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
             for line in f:
                 words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':            # Do something with the line, e.g., print it
+                if len(words) > 0 and words[0].lower() == 'gender:':
                     subject_cluster.append(words[1])
 
     test_sets = [subject_ids[i::n] for i in range(n)]
 
     # TODO: 같은 cluster만 이용해서 set 만들기
-    for test_set in test_sets:
+    for idx, test_set in enumerate(test_sets):
+        
         result.append({"train": test_set, "val": test_set, "test": test_set})
 
     random.seed()
@@ -47,9 +48,9 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
 class WesadExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
         # Person specific
-        folds = n_fold_split(Wesad.SUBJECTS_IDS, n, seed=seed)
+        # folds = n_fold_split(Wesad.SUBJECTS_IDS, n, seed=seed)
         # Cluster specific (trait-based)
-        # folds = n_fold_split_cluster_trait(Wesad.SUBJECTS_IDS, n, "WESAD", seed=seed)
+        folds = n_fold_split_cluster_trait(Wesad.SUBJECTS_IDS, n, "WESAD", seed=seed)
         # Cluster specific (feature-based)
         # folds = n_fold_split_cluster_feature(Wesad.SUBJECTS_IDS, n, seed=seed)
 

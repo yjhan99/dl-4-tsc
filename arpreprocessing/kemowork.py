@@ -2,7 +2,7 @@ import itertools as it
 import pickle
 
 import numpy as np
-# import scipy.stats
+import scipy.stats
 
 from arpreprocessing.helpers import filter_signal, get_empatica_sampling
 from arpreprocessing.preprocessorlabel import PreprocessorLabel
@@ -117,14 +117,16 @@ class KEmoWorkSubject(SubjectLabel):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["EDA_0"]) - 4*10, 4*1): #10sec*4Hz window and 1sec*4Hz sliding
-        # for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
+        # TODO: window 사이즈를 바꾸면 experiment.py에서 np.exand_dims를 할때 axisError가 남.. dim은 변한게 없는데 왜 나는지는 정말 모르겠음ㅠ
+        # for i in range(0, len(data["signal"]["EDA_0"]) - 40, 20): #10sec*4Hz window and 5sec*4Hz sliding
+        for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             personalized_threshold = np.mean(data["label"])
-            label_window_mean = np.mean(data["label"][first_index:last_index])
 
-            if label_window_mean not in range(0,20):
-                continue
+            if len(data['label'][first_index:last_index]) == 0:
+                label_window_mean = scipy.stats.mstats.mode(data["label"])[0][0]
+            else:
+                label_window_mean = np.mean(data["label"][first_index:last_index])
 
             channel_id = 0
             for signal in data["signal"]:
@@ -140,5 +142,6 @@ class KEmoWorkSubject(SubjectLabel):
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
         first_index = int((i * freq) // 4)
-        window_size = int(10 * freq)
+        # window_size = int(10 * freq) # For 10sec window
+        window_size = int(60 * freq) # For 60sec window
         return first_index, first_index + window_size

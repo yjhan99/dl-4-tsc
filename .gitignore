@@ -4,6 +4,7 @@ csvresults
 *.pkl
 *.DS_Store
 *.ipynb
+archives/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

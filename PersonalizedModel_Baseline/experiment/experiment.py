@@ -167,7 +167,7 @@ class Experiment(ABC):
 def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name, seed=5):
     path = "archives/mts_archive"
     dataset = Dataset(dataset_name, None, logger_obj)
-    # # For Baseline Model (User specific)
+    # # For Baseline Model
     x, y, sampling_rate = dataset.load(path, test_ids, channels_ids)
 
     # print('before')
@@ -210,11 +210,8 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
     # print('after')
     # print(len(x_train[0]))
     # print(np.array(x_train[0]).shape)
-    print(len(y_test))
+    # print(len(y_test))
     
-    # x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
-    # x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
-    # x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
     x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
@@ -261,6 +258,7 @@ def get_batch_size(classifier_name):
     if classifier_name == "fcnM":
         return 4
     return 32
+
 
 def n_fold_split(subject_ids, n, seed=5):
     result = []
