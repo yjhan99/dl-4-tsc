@@ -199,6 +199,7 @@ def calculate_metrics(y_true, y_pred, y_pred_probabilities, duration, y_true_val
     res['f1'] = f1_score(y_true, y_pred, average='macro')
 
     try:
+        print(y_pred_probabilities.shape)
         if y_pred_probabilities.shape[1] == 2:
             res['auc'] = roc_auc_score(y_true, y_pred_probabilities[:, 0], multi_class="ovo")
         else:

@@ -74,8 +74,7 @@ def get_result(architecture, dataset, eval_i, setups):
             loss.append(df_best_model["best_model_val_loss"][0])
             accuracy.append(df_metrics["accuracy"][0])
             f1.append(df_metrics["f1"][0])
-            # auc.append(df_metrics["auc"][0])
-            auc.append(1-df_metrics["auc"][0])
+            auc.append(df_metrics["auc"][0])
             duration.append(df_metrics["duration"][0])
 
         duration = np.array(duration) / 60
