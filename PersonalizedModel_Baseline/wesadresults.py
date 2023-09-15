@@ -87,7 +87,8 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        # yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results_cluster/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():

@@ -1,8 +1,5 @@
 import sys
 
-from experiment.acertainexperiment import AscertainExperimentNFold
-from experiment.amigosexperiment import AmigosExperimentNFold
-from experiment.decafexperiment import DecafExperimentNFold
 from experiment.hyperparametertuning import HyperparameterTuning
 from experiment.wesadexperiment import WesadExperimentNFold
 from experiment.kemoworkexperiment import KEmoWorkExperimentNFold
