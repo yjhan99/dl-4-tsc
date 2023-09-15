@@ -2,7 +2,7 @@ import sys
 
 from experiment.hyperparametertuning import HyperparameterTuning
 from experiment.wesadexperiment_cluster import WesadExperimentNFold
-from experiment.kemoworkexperiment import KEmoWorkExperimentNFold
+from experiment.kemoworkexperiment_cluster import KEmoWorkExperimentNFold
 from utils.loggerwrapper import GLOBAL_LOGGER
 from utils.utils import set_available_gpus
 
