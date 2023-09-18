@@ -116,6 +116,30 @@ def count_classes_representation():
     return df
 
 
+def count_test_classes_representation():
+    results = []
+
+    for dataset in ["WESAD"]:
+        y_num = []
+        result_path = "./results"
+        folder_names = os.listdir(result_path)
+        folder_names.sort()
+
+        for folder_name in folder_names:
+            if folder_name.startswith("WESAD_15fold_"):
+                path = os.path.join(result_path, folder_name, "tune_00/cnnM/it_00/predictions.txt")
+                if not os.path.exists(path):
+                    continue
+                with open(path, 'r') as f:
+                    lines = f.readlines()
+                    y_num.append(len(lines[0].strip().split()))
+                    
+    results.append(["WESAD", np.mean(y_num), np.std(y_num)])
+
+    df = pd.DataFrame(results, columns=["Dataset", "Num of Test Data (mean)", "Num of Test Data (std)"])
+    return df
+
+
 def rename_architectures(dataset_column):
     dataset_column = dataset_column.str.replace(r'M$', '')
     dataset_column = dataset_column.str.capitalize()
@@ -235,8 +259,8 @@ def metrics_for_best_evaluations():
 
 def prepare_readable_values(results):
     results.Architecture = rename_architectures(results.Architecture)
-    results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
-    results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
+    # results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
+    # results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
     return results
 
 
@@ -278,18 +302,40 @@ def print_classes_representation():
                                         f"Classes balance in datasets in percentage", f"tab:datasetsClassesBalancePerc")
         print(latex)
 
+def print_test_classes_representation():
+    df = count_test_classes_representation()
+    with pd.option_context("display.float_format", "{:,.0f}%".format):
+        latex = prepare_latex_for_paper(df.to_latex(index=False, column_format="|l|r|r|r|"),
+                                        f"Number of Test Data", f"tab:testdatanum")
+        print(latex)
 
 if __name__ == '__main__':
     results = metrics_for_best_evaluations()
     create_file_for_LOSO(results, "WESAD")
 
-    # This prints out detailed LOSO classification metrics for the best performing (highest F1 score) model
-    print_classification_metrics_for_LOSO(results)
+    # # This prints out detailed LOSO classification metrics for the best performing (highest F1 score) model
+    # print_classification_metrics_for_LOSO(results)
 
     results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
-    evaluation_df = results["Evaluation"].apply(list)
+    # evaluation_df = results["Evaluation"].apply(list)
 
-    results = results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
+    results = results.agg({
+        "Accuracy": ['mean', 'std'],
+        "F1-score": ['mean', 'std'],
+        "ROC AUC": ['mean', 'std'],
+    }).reset_index()
+
+    results = pd.DataFrame({
+        'Dataset': results['Dataset'],
+        'Architecture': results['Architecture'],
+        'Accuracy': results['Accuracy', 'mean'],
+        'Accuracy (std)': results['Accuracy', 'std'],
+        'F1-score': results['F1-score', 'mean'],
+        'F1-score (std)': results['F1-score', 'std'],
+        'ROC AUC': results['ROC AUC', 'mean'],
+        'ROC AUC (std)': results['ROC AUC', 'std']
+    }
+    )
 
     # # This prints out classification metrics for each class using the best performing (highest F1 score) model
     # print_classification_metrics_for_classes(results, evaluation_df)
@@ -300,4 +346,6 @@ if __name__ == '__main__':
 
     print_metrics_for_datasets()
 
-    print_classes_representation()
+    # print_classes_representation()
+
+    print_test_classes_representation()
