@@ -43,6 +43,151 @@ def get_ndft(sampling):
 def reshape_samples(samples):
     return [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in samples]
 
+class GaussianNoiseLayer(tf.keras.layers.Layer):
+    def __init__(self, stddev, **kwargs):
+        super(GaussianNoiseLayer, self).__init__(**kwargs)
+        self.stddev = stddev
+
+    def call(self, inputs, training=None):
+        if training:
+            noise = tf.random.normal(shape=tf.shape(inputs), mean=0.0, stddev=self.stddev)
+            return inputs + noise
+        return inputs
+
+
+class Autoencoder_old(keras.Model):
+  def __init__(self, input_shapes, nb_classes):
+    super(Autoencoder_old, self).__init__()
+    self.input_shapes = input_shapes
+    self.nb_classes = nb_classes
+
+    input_layers = []
+    channel_outputs = []
+    
+    for channel_id, input_shape in enumerate(input_shapes):
+        # input_layer = keras.layers.Input(shape=(None, round(input_shape[0] / 2), 1), name=f"input_for_{channel_id}")
+        input_layer = keras.layers.Input(input_shape)
+        input_layers.append(input_layer)
+        input_layer_flattened = keras.layers.TimeDistributed(keras.layers.Flatten())(input_layer)
+        layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(input_layer_flattened)
+        layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(layer)
+        lstm_layer = keras.layers.LSTM(4)(layer)
+        channel_outputs.append(lstm_layer)
+
+    flat = keras.layers.concatenate(channel_outputs, axis=-1) if len(channel_outputs) > 1 else channel_outputs[0]
+
+    self.encoder = keras.models.Model(inputs=input_layers, outputs=flat)
+
+    # encoded_output = keras.layers.Input(shape=(None, 4*len(input_shapes)), name="encoded_output")
+    # decoded_inputs = keras.layers.Reshape(target_shape=[len(input_shapes)*(-1,4)])(encoded_output)
+
+    encoded_output = keras.layers.Input(shape=(4*len(input_shapes),), name="encoded_output")
+    encoded_output_noise = GaussianNoiseLayer(stddev=0.1)(encoded_output)
+    split_tensors = tf.split(encoded_output_noise, num_or_size_splits=len(input_shapes), axis=-1)
+    decoded_outputs = [keras.layers.Reshape(target_shape=(-1, 4))(split_tensor) for split_tensor in split_tensors]
+    
+    reshaped_layers = []
+
+    for channel_id, (input_shape, decoded_output) in enumerate(zip(input_shapes, decoded_outputs)):
+        print(channel_id)
+        print(input_shape)
+        print(decoded_output)
+        # input_layer = keras.layers.Input(shape=(None, round(decoded_input[0] / 2), 1), name=f"input_for_{channel_id}")
+        lstm_layer = keras.layers.LSTM(4, return_sequences=True)(decoded_output)
+        layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(lstm_layer)
+        layer = keras.layers.TimeDistributed(keras.layers.Dense(input_shape[0], activation='relu'))(layer)
+        reshaped_layer = keras.layers.Reshape(target_shape=input_shape)(layer)
+        reshaped_layers.append(reshaped_layer)
+
+    self.decoder = keras.models.Model(inputs=encoded_output, outputs=reshaped_layers)
+
+  def call(self, x):
+    encoded = self.encoder(x)
+    decoded = self.decoder(encoded)
+    return decoded
+  
+
+class Autoencoder_old2(keras.Model):
+  def __init__(self, input_shape):
+    super(Autoencoder_old2, self).__init__()
+    self.input_shapes = input_shape
+    print('input shape:', input_shape)
+
+    e_input_layer = keras.layers.Input((input_shape))
+    print('e input layer:', e_input_layer.shape)
+    e_input_layer_flattened = keras.layers.TimeDistributed(keras.layers.Flatten())(e_input_layer)
+    print('e input flattened:', e_input_layer_flattened.shape)
+    e_layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(e_input_layer_flattened)
+    e_layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(e_layer)
+    print('e layer:', e_layer.shape)
+    e_lstm_layer = keras.layers.LSTM(4)(e_layer)
+    print('e lstm layer:', e_lstm_layer.shape)
+
+    self.encoder = keras.models.Model(inputs=e_input_layer, outputs=e_lstm_layer)
+
+    # d_input_layer = keras.layers.Input(shape=e_lstm_layer.shape[1:])
+    # d_input_layer_noise = GaussianNoiseLayer(stddev=0.1)(d_input_layer)
+    
+    d_input_layer = keras.layers.Input((4,))
+    print('d input layer:', d_input_layer.shape)
+    d_input_layer_noise = GaussianNoiseLayer(stddev=0.1)(d_input_layer)
+    print('d input layer noise:', d_input_layer_noise.shape)
+    d_repeat_layer = keras.layers.RepeatVector(input_shape[0])(d_input_layer_noise)
+    print('d repeat layer:', d_input_layer.shape)
+    d_lstm_layer = keras.layers.LSTM(4, return_sequences=True, input_shape=d_input_layer.shape)(d_repeat_layer)
+    print('d lstm layer:', d_lstm_layer.shape)
+
+    # d_lstm_layer = keras.layers.LSTM(4, return_sequences=True)(d_input_layer_noise)
+    d_layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(d_lstm_layer)
+    d_layer = keras.layers.TimeDistributed(keras.layers.Dense(4, activation='relu'))(d_layer)
+    d_reshaped_layer = keras.layers.Reshape(target_shape=input_shape)(d_layer)
+
+    self.decoder = keras.models.Model(inputs=d_input_layer, outputs=d_reshaped_layer)
+
+  def call(self, x):
+    encoded = self.encoder(x)
+    decoded = self.decoder(encoded)
+    return decoded
+  
+
+class Autoencoder(keras.Model):
+    def __init__(self, input_shape):
+        super(Autoencoder, self).__init__()
+        self.input_shapes = input_shape
+
+        e_input_layer = keras.layers.Input(input_shape)
+        print('e input layer:', e_input_layer.shape)
+        e_input_layer_flattened = keras.layers.Flatten()(e_input_layer)
+        print('e input layer flattended:', e_input_layer_flattened.shape)
+        e_input_expanded = keras.layers.Reshape((1,-1))(e_input_layer_flattened)
+        print('e input expanded:', e_input_expanded.shape)
+        e_layer = keras.layers.Dense(4, activation='relu')(e_input_expanded)
+        e_layer = keras.layers.Dense(4, activation='relu')(e_layer)
+        print('e layer:', e_layer.shape)
+        e_lstm_layer = keras.layers.LSTM(4, return_sequences=False)(e_layer)
+
+        self.encoder = keras.models.Model(inputs=e_input_layer, outputs=e_lstm_layer)
+
+        d_input_layer = keras.layers.Input(e_lstm_layer.shape)
+        print('d input layer:', d_input_layer.shape)
+        d_input_layer_noise = GaussianNoiseLayer(stddev=0.1)(d_input_layer)
+        print('d input layer noise:', d_input_layer_noise.shape)
+        d_input_layer_reshaped = keras.layers.Reshape(target_shape=(1,4))(d_input_layer_noise)
+        print('d input layer reshaped:', d_input_layer_reshaped.shape)
+        d_lstm_layer = keras.layers.LSTM(4, return_sequences=False)(d_input_layer_reshaped)
+        print('d lstm layer:', d_lstm_layer.shape)
+        d_layer = keras.layers.Dense(4, activation='relu')(d_lstm_layer)
+        d_layer = keras.layers.Dense(input_shape[0], activation='relu')(d_layer)
+        print('d layer:', d_layer.shape)
+        d_reshaped_layer = keras.layers.Reshape(target_shape=input_shape)(d_layer)
+        print('d reshaped layer:', d_reshaped_layer.shape)
+
+        self.decoder = keras.models.Model(inputs=d_input_layer, outputs=d_reshaped_layer)
+
+    def call(self, x):
+      encoded = self.encoder(x)
+      decoded = self.decoder(encoded)
+      return decoded
 
 def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     result = []
@@ -111,7 +256,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
     dataset = Dataset("KEmoWork", None, GLOBAL_LOGGER)
     X, y, sampling_rate = dataset.load(path, subject_ids, tuple(range(SIGNALS_LEN)))
 
-    X = [np.expand_dims(np.array(x, dtype=object), 2) for x in X]
+    # X = [np.expand_dims(np.array(x, dtype=object), 2) for x in X]
+    X = [np.expand_dims(np.array(x), 2) for x in X]
     encoder = LabelEncoder()
     y = encoder.fit_transform(y)
     nb_classes = len(np.unique(y))
@@ -133,7 +279,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
         
-    print(input_shapes)
+    # print(input_shapes)
+    # print(X[0].shape)
                 
     with Graph().as_default():
         session = get_new_session()
@@ -141,60 +288,22 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
             with tf.device('/device:GPU:0'):
                 session.run(tf.compat.v1.global_variables_initializer())
 
-                input_layers = []
-                channel_outputs = []
-                # extra_dense_layers_no = 2
-                dense_outputs = len(input_shapes) * [500]
-                
+                encoded_Xs = []
+
                 for channel_id, input_shape in enumerate(input_shapes):
-                    input_layer = keras.layers.Input(shape=(None, round(input_shape[0] / 2), 1), name=f"input_for_{channel_id}")
-                    input_layers.append(input_layer)
+                    print(X[channel_id].shape)
+                    autoencoder = Autoencoder(input_shape)
+                    autoencoder.compile(loss='categorical_crossentropy', 
+                        optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)), metrics=['accuracy'])
+                    mini_batch_size = int(min(X[0].shape[0] / 10, 16))
+                    autoencoder.fit(X[channel_id], X[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
+                        callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='loss')], shuffle=True)
+                    encoded_X = autoencoder.encoder(X[channel_id])
+                    encoded_Xs.append(encoded_X)
 
-                    input_layer_flattened = keras.layers.TimeDistributed(keras.layers.Flatten())(input_layer)
-
-                    # layer_1 = keras.layers.TimeDistributed(keras.layers.Dropout(0.1))(input_layer_flattened)
-                    layer = keras.layers.TimeDistributed(keras.layers.Dense(dense_outputs[channel_id], activation='relu'))(input_layer_flattened)
-                    layer = keras.layers.TimeDistributed(keras.layers.Dense(8, activation='relu'))(layer)
-                    layer = keras.layers.TimeDistributed(keras.layers.Dense(8, activation='relu'))(layer)
-
-                    # for i in range(extra_dense_layers_no):
-                    #     # layer = keras.layers.TimeDistributed(keras.layers.Dropout(0.2))(layer)
-                    #     layer = keras.layers.TimeDistributed(keras.layers.Dense(dense_outputs[channel_id], activation='relu'))(
-                    #         layer)
-
-                    # output_layer = keras.layers.TimeDistributed(keras.layers.Dropout(0.3))(layer)
-                    output_layer = keras.layers.LSTM(8)(layer)
-                    channel_outputs.append(output_layer)
-
-                flat = keras.layers.concatenate(channel_outputs, axis=-1) if len(channel_outputs) > 1 else channel_outputs[0]
-                output_layer = keras.layers.Dense(nb_classes, activation='softmax')(flat)
-
-                model = keras.models.Model(inputs=input_layers, outputs=output_layer)
-
-                for layer in model.layers:
-                    layer_input_shape = layer.input_shape
-                    layer_output_shape = layer.output_shape
-                    print(f"Layer: {layer.name}")
-                    print(f"Input Shape: {layer_input_shape}")
-                    print(f"Output Shape: {layer_output_shape}")
-                    print('-' * 50)
-
-                model.compile(loss='categorical_crossentropy', optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)),
-                            metrics=['accuracy'])
-                
-                X = reshape_samples(X)
-                
-                mini_batch_size = int(min(X[0].shape[0] / 10, 16))
-
-                hist = model.fit(X, y, batch_size=mini_batch_size, epochs=100, verbose=False,
-                                    validation_data=(X, y), callbacks=[keras.callbacks.EarlyStopping(patience=30)], shuffle=True)
-
-                y_pred_probabilities = model.predict(X)
-
-                y_pred = np.argmax(y_pred_probabilities, axis=1)
-
-                print(y_pred)
-
+                    print(encoded_X.shape)
+                    
+                # TODO: validation 어떻게 할지 ㅎ
                 
     # random.seed(seed)
 
