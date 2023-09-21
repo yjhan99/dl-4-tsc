@@ -114,7 +114,7 @@ venv.bak/
 
 # Project specific
 /archives/
-config.ini
+# config.ini
 
 
 # Covers JetBrains IDEs: IntelliJ, RubyMine, PhpStorm, AppCode, PyCharm, CLion, Android Studio and WebStorm
