@@ -1,5 +1,5 @@
 from arpreprocessing.kemowork import KEmoWork
-from experiment.clustering.kemoworkclustering import n_fold_split_cluster_trait, n_fold_split_cluster_feature
+from clustering.kemoworkclustering import n_fold_split_cluster_trait, n_fold_split_cluster_feature
 from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
 SIGNALS_LEN = 11

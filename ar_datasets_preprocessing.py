@@ -18,8 +18,8 @@ if __name__ == '__main__':
     # dataset = Amigos(GLOBAL_LOGGER, config['Paths']['amigos_dir']).get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    # dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
-    # dataset.save(config['Paths']['mts_out_dir'])
-
-    dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'], 'STRESS').get_dataset()
+    dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
     dataset.save(config['Paths']['mts_out_dir'])
+
+    # dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'], 'STRESS').get_dataset()
+    # dataset.save(config['Paths']['mts_out_dir'])

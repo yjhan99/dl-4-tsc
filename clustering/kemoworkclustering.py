@@ -147,96 +147,97 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
 
 
 def n_fold_split_cluster_feature(subject_ids, n, seed=5):
-    # path = "./archives/mts_archive"
-    # dataset = Dataset("KEmoWork", None, GLOBAL_LOGGER)
-    # channels_ids = tuple(range(SIGNALS_LEN))
-    # X, s, y, sampling_rate = dataset.load_with_subjectid(path, subject_ids, channels_ids)
+    path = "./archives/mts_archive"
+    dataset = Dataset("KEmoWork", None, GLOBAL_LOGGER)
+    channels_ids = tuple(range(SIGNALS_LEN))
+    X, s, y, sampling_rate = dataset.load_with_subjectid(path, subject_ids, channels_ids)
 
-    # random.seed(seed)
+    random.seed(seed)
     
-    # x_test, x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
-    # s_test, s_val, s_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+    x_test, x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+    s_test, s_val, s_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
 
-    # for channel_id in range(len(channels_ids)):
-    #     signal = X[channel_id]
-    #     id = s[channel_id]
+    for channel_id in range(len(channels_ids)):
+        signal = X[channel_id]
+        id = s[channel_id]
 
-    #     num_rows = len(signal)
-    #     split_size = num_rows // 4
+        num_rows = len(signal)
+        split_size = num_rows // 4
 
-    #     combined_list = list(zip(signal, id))
-    #     random.shuffle(combined_list)
-    #     shuffled_signal, shuffled_id = zip(*combined_list)
+        combined_list = list(zip(signal, id))
+        random.shuffle(combined_list)
+        shuffled_signal, shuffled_id = zip(*combined_list)
 
-    #     for i in range(split_size):
-    #         x_test[channel_id].append(shuffled_signal[i])
-    #         s_test[channel_id].append(shuffled_id[i])
-    #     for i in range(split_size, split_size*2):
-    #         x_val[channel_id].append(shuffled_signal[i])
-    #         s_val[channel_id].append(shuffled_id[i])
-    #     for i in range(split_size*2,num_rows):
-    #         x_train[channel_id].append(shuffled_signal[i])
-    #         s_train[channel_id].append(shuffled_id[i])
+        for i in range(split_size):
+            x_test[channel_id].append(shuffled_signal[i])
+            s_test[channel_id].append(shuffled_id[i])
+        for i in range(split_size, split_size*2):
+            x_val[channel_id].append(shuffled_signal[i])
+            s_val[channel_id].append(shuffled_id[i])
+        for i in range(split_size*2,num_rows):
+            x_train[channel_id].append(shuffled_signal[i])
+            s_train[channel_id].append(shuffled_id[i])
 
-    # x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
-    # x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
-    # x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
+    x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
+    x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
+    x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
 
-    # s_train = [np.expand_dims(np.array(s), 2) for s in s_train]
-    # s_val = [np.expand_dims(np.array(s), 2) for s in s_val]
-    # s_test = [np.expand_dims(np.array(s), 2) for s in s_test]
+    s_train = [np.expand_dims(np.array(s), 2) for s in s_train]
+    s_val = [np.expand_dims(np.array(s), 2) for s in s_val]
+    s_test = [np.expand_dims(np.array(s), 2) for s in s_test]
 
-    # if type(X) == list:
-    #     input_shapes = [x.shape[1:] for x in x_train]
-    # else:
-    #     input_shapes = x_train.shape[1:]
+    if type(X) == list:
+        input_shapes = [x.shape[1:] for x in x_train]
+    else:
+        input_shapes = x_train.shape[1:]
 
-    # ndft_arr = [get_ndft(x) for x in sampling_rate]
+    ndft_arr = [get_ndft(x) for x in sampling_rate]
 
-    # if len(input_shapes) != len(ndft_arr):
-    #     raise Exception("Different sizes of input_shapes and ndft_arr")
+    if len(input_shapes) != len(ndft_arr):
+        raise Exception("Different sizes of input_shapes and ndft_arr")
 
-    # for i in range(len(input_shapes)):
-    #     if input_shapes[i][0] < ndft_arr[i]:
-    #         raise Exception(
-    #             f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
+    for i in range(len(input_shapes)):
+        if input_shapes[i][0] < ndft_arr[i]:
+            raise Exception(
+                f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
  
-    # with Graph().as_default():
-    #     session = get_new_session()
-    #     with session.as_default():
-    #         with tf.device('/device:GPU:0'):
-    #             session.run(tf.compat.v1.global_variables_initializer())
-    #             # tf.compat.v1.enable_eager_execution()
+    with Graph().as_default():
+        session = get_new_session()
+        with session.as_default():
+            with tf.device('/device:GPU:0'):
+                session.run(tf.compat.v1.global_variables_initializer())
+                # tf.compat.v1.enable_eager_execution()
 
-    #             X_encoded = []
+                X_encoded = []
 
-    #             for channel_id, input_shape in enumerate(input_shapes):
-    #                 print('x test:', x_test[channel_id].shape)
-    #                 autoencoder = Autoencoder(input_shape)
-    #                 autoencoder.compile(loss='mean_squared_error', 
-    #                     optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)))
-    #                     # optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)), run_eagerly=True)
-    #                 mini_batch_size = int(min(x_train[0].shape[0] / 10, 16))
-    #                 autoencoder.fit(x_train[channel_id], x_train[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
-    #                     validation_data=(x_val[channel_id], x_val[channel_id]),
-    #                     callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='val_loss')], shuffle=True)
-    #                 # encoded_x_test = autoencoder.encoder(x_test[channel_id])
-    #                 encoded_x_test = autoencoder.encoder(x_test[channel_id]).eval()
-    #                 print('encoded x test:', encoded_x_test.shape)
+                for channel_id, input_shape in enumerate(input_shapes):
+                    print('x test:', x_test[channel_id].shape)
+                    autoencoder = Autoencoder(input_shape)
+                    autoencoder.compile(loss='mean_squared_error', 
+                        optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)))
+                        # optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)), run_eagerly=True)
+                    mini_batch_size = int(min(x_train[0].shape[0] / 10, 16))
+                    autoencoder.fit(x_train[channel_id], x_train[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
+                        validation_data=(x_val[channel_id], x_val[channel_id]),
+                        callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='val_loss')], shuffle=True)
+                    # encoded_x_test = autoencoder.encoder(x_test[channel_id])
+                    encoded_x_test = autoencoder.encoder(x_test[channel_id]).eval()
+                    print('encoded x test:', encoded_x_test.shape)
 
-    #                 X_encoded.append(encoded_x_test)
+                    X_encoded.append(encoded_x_test)
 
-    # X_encoded_df = pd.DataFrame(np.concatenate(X_encoded, axis=1))
-    # s_test_list = [s_test[0][i,0,0] for i in range(s_test[0].shape[0])]
-    # # valuecounts = Counter(s_test_list)
-    # # for value, count in valuecounts.items():
-    # #     print(value, ":", count)
-    # X_encoded_df['pnum'] = s_test_list
+    X_encoded_df = pd.DataFrame(np.concatenate(X_encoded, axis=1))
+    s_test_list = [s_test[0][i,0,0] for i in range(s_test[0].shape[0])]
+    # valuecounts = Counter(s_test_list)
+    # for value, count in valuecounts.items():
+    #     print(value, ":", count)
+    X_encoded_df['pnum'] = s_test_list
+    
     # X_encoded_df.to_csv('./archives/KEmoWork/feature_clustering_results.csv', sep=',')
 
-    file_path = "./archives/{0}/feature_clustering_results.csv".format("KEmoWork")
-    file = pd.read_csv(file_path)
-    X_encoded_df = pd.DataFrame(file)
+    # file_path = "./archives/{0}/feature_clustering_results.csv".format("KEmoWork")
+    # file = pd.read_csv(file_path)
+    # X_encoded_df = pd.DataFrame(file)
 
     scaler = MinMaxScaler()
     X_encoded_scaled = scaler.fit_transform(X_encoded_df.iloc[:,:-1])

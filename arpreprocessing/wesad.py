@@ -109,8 +109,8 @@ class WesadSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        # for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 120, 60): # 60sec*4Hz window and 30sec*4Hz sliding
-        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
+        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 40, 20): # 60sec*4Hz window and 30sec*4Hz sliding
+        # for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 
@@ -131,6 +131,6 @@ class WesadSubject(Subject):
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
         first_index = int((i * freq) // 4) # Due to EDA's sampling rate 4Hz
-        # window_size = int(30 * freq)
-        window_size = int(60 * freq)
+        window_size = int(10 * freq)
+        # window_size = int(60 * freq)
         return first_index, first_index + window_size

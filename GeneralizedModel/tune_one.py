@@ -8,12 +8,6 @@ from utils.utils import set_available_gpus
 
 
 def get_dataset(name):
-    if name.startswith("amigos_fold_"):
-        return AmigosExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
-    if name.startswith("decaf_fold_"):
-        return DecafExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
-    if name.startswith("ascertain_fold_"):
-        return AscertainExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("wesad_fold_"):
         return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("kemowork_fold_"):
