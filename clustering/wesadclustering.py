@@ -1,21 +1,90 @@
 import random
 import math
+import os
+from scipy import stats
+from scipy.spatial.distance import euclidean
 
 import numpy as np
 
-from utils.utils import prepare_data
+from utils.utils import get_new_session
 from utils.loggerwrapper import GLOBAL_LOGGER
 from arpreprocessing.dataset import Dataset
 
 import keras
-import keras_contrib
+import tensorflow as tf
+from tensorflow import Graph
+
+import pandas as pd
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import MinMaxScaler
 
 SIGNALS_LEN = 14
+
+def get_ndft(sampling):
+    if sampling <= 2:
+        return 8
+    if sampling <= 4:
+        return 16
+    if sampling <= 8:
+        return 32
+    if sampling <= 16:
+        return 64
+    if sampling <= 32:
+        return 128
+    if sampling in [70, 64, 65]:
+        return 256
+    raise Exception(f"No such sampling as {sampling}")
+
+
+class GaussianNoiseLayer(tf.keras.layers.Layer):
+    def __init__(self, stddev, **kwargs):
+        super(GaussianNoiseLayer, self).__init__(**kwargs)
+        self.stddev = stddev
+
+    def call(self, inputs, training=None):
+        if training:
+            noise = tf.random.normal(shape=tf.shape(inputs), mean=0.0, stddev=self.stddev)
+            return inputs + noise
+        return inputs
+      
+
+class Autoencoder(keras.Model):
+    def __init__(self, input_shape):
+        super(Autoencoder, self).__init__()
+        self.input_shapes = input_shape
+
+        e_input_layer = keras.layers.Input(input_shape)
+        e_input_layer_flattened = keras.layers.Flatten()(e_input_layer)
+        e_input_expanded = keras.layers.Reshape((1,-1))(e_input_layer_flattened)
+        e_layer = keras.layers.Dense(4, activation='relu')(e_input_expanded)
+        e_layer = keras.layers.Dense(4, activation='relu')(e_layer)
+        e_lstm_layer = keras.layers.LSTM(4, return_sequences=False)(e_layer)
+
+        self.encoder = keras.models.Model(inputs=e_input_layer, outputs=e_lstm_layer)
+
+        d_input_layer = keras.layers.Input(e_lstm_layer.shape)
+        d_input_layer_noise = GaussianNoiseLayer(stddev=0.1)(d_input_layer)
+        d_input_layer_reshaped = keras.layers.Reshape(target_shape=(1,4))(d_input_layer_noise)
+        d_lstm_layer = keras.layers.LSTM(4, return_sequences=False)(d_input_layer_reshaped)
+        d_layer = keras.layers.Dense(4, activation='relu')(d_lstm_layer)
+        d_layer = keras.layers.Dense(input_shape[0], activation='relu')(d_layer)
+        d_reshaped_layer = keras.layers.Reshape(target_shape=input_shape)(d_layer)
+
+        self.decoder = keras.models.Model(inputs=d_input_layer, outputs=d_reshaped_layer)
+
+    def call(self, x):
+      encoded = self.encoder(x)
+      decoded = self.decoder(encoded)
+      return decoded
+
 
 def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     result = []
 
     random.seed(seed)
+
     subject_ids = list(subject_ids)
     subject_ids_female = list()
     subject_ids_male = list()
@@ -51,71 +120,138 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     return result
 
 
-def get_ndft(sampling):
-    if sampling <= 2:
-        return 8
-    if sampling <= 4:
-        return 16
-    if sampling <= 8:
-        return 32
-    if sampling <= 16:
-        return 64
-    if sampling <= 32:
-        return 128
-    if sampling in [70, 64, 65]:
-        return 256
-    raise Exception(f"No such sampling as {sampling}")
-
 
 def n_fold_split_cluster_feature(subject_ids, n, seed=5):
-    path = "../archives/mts_archive"
-    dataset = Dataset("WESAD", None, GLOBAL_LOGGER)
-    x, y, sampling_rate = dataset.load(path, subject_ids, SIGNALS_LEN)
-
-    random.seed(seed)
-
-    x_test, x_train = [[] for i in range(max(SIGNALS_LEN) + 1)], [[] for i in range(max(SIGNALS_LEN) + 1)]
-    y_test, y_train = [], []
-    sampling_test, sampling_train = sampling_rate, sampling_rate, sampling_rate
-
-    for subject_id in subject_ids:
-        for channel_id in range(len(SIGNALS_LEN)):
-            signal = x[channel_id]
-
-            num_rows = len(signal)
-            split_size = num_rows // 5
-
-            combined_list = list(zip(signal, y))
-            random.shuffle(combined_list)
-            shuffled_signal, shuffled_y = zip(*combined_list)
-
-            for i in range(split_size):
-                x_test[channel_id] += shuffled_signal[i]
-            for i in range(split_size,num_rows):
-                x_train[channel_id] += shuffled_signal[i]
-
-        for i in range(split_size):
-            y_test += shuffled_y[i]
-        for i in range(split_size,num_rows):
-            y_train += shuffled_y[i]
-
-    random.seed()
-
-    x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
-    x_test = [np.expand_dims(np.array(x), 2) for x in x_test]
-    input_shapes, nb_classes, y_none, y_train, y_test, y_true = prepare_data(x_train, y_train, None, y_test)
-    ndft_arr = [get_ndft(x) for x in sampling_test]
+    test_sets = [subject_ids[i::n] for i in range(n)]
 
     result = []
 
-    # random.seed(seed)
-    # subject_ids = list(subject_ids)
+    random.seed(seed)
 
-    # test_sets = [subject_ids[i::n] for i in range(n)]
+    for test_subject in test_sets:
+        rest = [x for x in subject_ids if (x not in test_subject)]
 
-    # for test_set in test_sets:
-    #     result.append({"train": test_set, "val": test_set, "test": test_set})
+        path = "./archives/mts_archive"
+        dataset = Dataset("WESAD", None, GLOBAL_LOGGER)
+        channels_ids = tuple(range(SIGNALS_LEN))
 
-    # random.seed()
+        X, s, y, sampling_rate = dataset.load_with_subjectid(path, rest, channels_ids)
+        test_X, test_s, test_y, sampling_rate = dataset.load_with_subjectid(path, test_subject, channels_ids)
+
+        try: 
+            file_path = "./encodedresults/WESAD/encoded_results_restof_{1}.csv".format("WESAD",test_subject)
+            file = pd.read_csv(file_path)
+            X_encoded_df = pd.DataFrame(file)
+            file_path = "./encodedresults/WESAD/encoded_results_{1}.csv".format("WESAD",test_subject)
+            file = pd.read_csv(file_path)
+            test_X_encoded_df = pd.DataFrame(file)
+
+        except FileNotFoundError:        
+            x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+            s_val, s_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+
+            for channel_id in range(len(channels_ids)):
+                signal = X[channel_id]
+                id = s[channel_id]
+
+                num_rows = len(signal)
+                split_size = num_rows // 4
+
+                combined_list = list(zip(signal, id))
+                random.shuffle(combined_list)
+                shuffled_signal, shuffled_id = zip(*combined_list)
+
+                for i in range(split_size):
+                    x_val[channel_id].append(shuffled_signal[i])
+                    s_val[channel_id].append(shuffled_id[i])
+                for i in range(split_size,num_rows):
+                    x_train[channel_id].append(shuffled_signal[i])
+                    s_train[channel_id].append(shuffled_id[i])
+
+            x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
+            x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
+            x_test = [np.expand_dims(np.array(x), 2) for x in test_X]
+
+            s_train = [np.expand_dims(np.array(s), 2) for s in s_train]
+            s_val = [np.expand_dims(np.array(s), 2) for s in s_val]
+
+            if type(X) == list:
+                input_shapes = [x.shape[1:] for x in x_train]
+            else:
+                input_shapes = x_train.shape[1:]
+
+            ndft_arr = [get_ndft(x) for x in sampling_rate]
+
+            if len(input_shapes) != len(ndft_arr):
+                raise Exception("Different sizes of input_shapes and ndft_arr")
+
+            for i in range(len(input_shapes)):
+                if input_shapes[i][0] < ndft_arr[i]:
+                    raise Exception(
+                        f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
+        
+            with Graph().as_default():
+                session = get_new_session()
+                with session.as_default():
+                    with tf.device('/device:GPU:0'):
+                        session.run(tf.compat.v1.global_variables_initializer())
+
+                        X_encoded = []
+                        test_X_encoded = []
+                        # s_list = []
+
+                        for channel_id, input_shape in enumerate(input_shapes):
+                            print('x test:', x_test[channel_id].shape)
+                            autoencoder = Autoencoder(input_shape)
+                            autoencoder.compile(loss='mean_squared_error', 
+                                optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)))
+                            mini_batch_size = int(min(x_train[0].shape[0] / 10, 16))
+                            autoencoder.fit(x_train[channel_id], x_train[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
+                                validation_data=(x_val[channel_id], x_val[channel_id]),
+                                callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='val_loss')], shuffle=True)
+                            encoded_x_train = autoencoder.encoder(x_train[channel_id]).eval()
+                            encoded_x_val = autoencoder.encoder(x_val[channel_id]).eval()
+                            encoded_x_test = autoencoder.encoder(x_test[channel_id]).eval()
+                            print('encoded x test:', encoded_x_test.shape)
+
+                            X_encoded.append(np.vstack((encoded_x_train, encoded_x_val)))
+                            test_X_encoded.append(encoded_x_test)
+
+            X_encoded_df = pd.DataFrame(np.concatenate(X_encoded, axis=1))
+            test_X_encoded_df = pd.DataFrame(np.concatenate(test_X_encoded, axis=1))
+            s_train_list = [s_train[0][i,0,0] for i in range(s_train[0].shape[0])]
+            s_val_list = [s_val[0][i,0,0] for i in range(s_val[0].shape[0])]
+            s_list = s_train_list + s_val_list
+            X_encoded_df['pnum'] = s_list
+            test_X_encoded_df['pnum'] = test_subject[0]
+            
+            X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',')
+            test_X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',')
+
+        scaler = MinMaxScaler()
+        scaler.fit(X_encoded_df.iloc[:,:-1])
+        X_encoded_scaled = pd.DataFrame(scaler.transform(X_encoded_df.iloc[:,:-1]))
+        X_encoded_scaled['pnum'] = X_encoded_df['pnum']
+        test_X_encoded_scaled = pd.DataFrame(scaler.transform(test_X_encoded_df.iloc[:,:-1]))
+
+        test_cluster_centroid = test_X_encoded_scaled.mean()
+        clusters_centroid = [X_encoded_scaled.loc[X_encoded_scaled['pnum']==rest_subject,X_encoded_scaled.columns!='pnum'].mean() for rest_subject in rest]
+        distances_to_clusters = []
+        rest_subject_closest = []
+        for rest_subject, cluster_centroid in zip(rest, clusters_centroid):
+            inter_cluster_distance = euclidean(test_cluster_centroid, cluster_centroid)
+            distances_to_clusters.append(inter_cluster_distance)
+            rest_subject_closest.append(rest_subject)
+        _, rest_subject_closest = map(list, zip(*sorted(zip(distances_to_clusters, rest_subject_closest))))
+
+        cluster_list = rest_subject_closest[:math.ceil(len(rest_subject_closest)/5)]
+        val_set = random.sample(cluster_list, math.ceil(len(cluster_list) / 5))
+        train_set = [x for x in rest if (x not in val_set) & (x in cluster_list)]
+
+        result.append({"train": train_set, "val": val_set, "test": test_subject})
+
+        print({"train": train_set, "val": val_set, "test": test_subject})
+
+    print(result)
+        
     return result
-

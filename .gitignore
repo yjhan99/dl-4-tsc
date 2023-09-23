@@ -3,6 +3,7 @@ results
 csvresults
 results_cluster
 results_test
+encodedresults
 *.pkl
 *.DS_Store
 *.ipynb
