@@ -84,7 +84,9 @@ class Autoencoder(keras.Model):
       decoded = self.decoder(encoded)
       return decoded
 
-def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+
+# Cannot handle unseen subject
+def n_fold_split_cluster_trait_old(subject_ids, n, dataset_name, seed=5):
     result = []
 
     random.seed(seed)
@@ -145,8 +147,75 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     random.seed()
     return result
 
+def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
 
-def n_fold_split_cluster_feature(subject_ids, n, seed=5):
+    result = []
+
+    random.seed(seed)
+
+    for test_subject in test_sets:
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        file_path = "./archives/{0}/{0}_PreSurvey.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
+
+        # Including only age and BFI-15 information
+        X = file.iloc[:, [1, 3] + list(range(80, 95))]
+        X.columns = ['pnum', 'age'] + [f'bfi_{i}' for i in range(1, 16)]
+
+        X_test = X.loc[X['pnum']==test_subject[0]]
+        X_rest = X.loc[X['pnum']!=test_subject[0]]
+
+        scaler = MinMaxScaler()
+        scaler.fit(X_rest.iloc[:,1:])
+        X_test_scaled = scaler.transform(X_test.iloc[:,1:])
+        X_rest_scaled = scaler.transform(X_rest.iloc[:,1:])
+
+        n_components = 3
+        pca = PCA(n_components=n_components)
+        pca.fit(X_rest_scaled)
+        X_test_pca = pd.DataFrame(pca.transform(X_test_scaled))
+        X_rest_pca = pd.DataFrame(pca.transform(X_rest_scaled))
+
+        silhouette_scores = []
+        possible_K_values = [i for i in range(2,6)]
+
+        for each_value in possible_K_values:
+            clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+            cluster_labels = clusterer.fit_predict(X_rest_pca)
+            silhouette_scores.append(silhouette_score(X_rest_pca, cluster_labels))
+
+        k_value = silhouette_scores.index(min(silhouette_scores))
+        clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+        cluster_labels = clusterer.fit_predict(X_rest_pca)
+        X_rest_pca['cluster'] = list(cluster_labels)
+        X_rest_pca['pnum'] = X_rest['pnum'].values.tolist()
+
+        cluster_list = [[] for _ in range(possible_K_values[k_value])]
+
+        for subject_id in rest:
+            X_subject = X_rest_pca.loc[X_rest_pca['pnum']==subject_id,'cluster'].values[0]
+            cluster_list[X_subject].append(subject_id)
+
+        test_cluster = clusterer.predict(X_test_pca)
+
+        for idx, cluster in enumerate(list(cluster_list)):
+            if idx == test_cluster:
+                rest = [x for x in rest if x in cluster]
+                val_set = random.sample(rest, math.ceil(len(rest) / 5))
+                train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
+
+        result.append({"train": train_set, "val": val_set, "test": test_subject})
+            
+    print(result)
+
+    random.seed()
+    return result
+
+
+# Cannot handle unseen subject
+def n_fold_split_cluster_feature_old(subject_ids, n, seed=5):
     path = "./archives/mts_archive"
     dataset = Dataset("KEmoWork", None, GLOBAL_LOGGER)
     channels_ids = tuple(range(SIGNALS_LEN))
@@ -285,3 +354,158 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
         
     return result
 
+
+def n_fold_split_cluster_feature(subject_ids, n, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
+    result = []
+
+    # random.seed(seed)
+
+    for test_subject in test_sets:
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        path = "./archives/mts_archive"
+        dataset = Dataset("KEmoWork", None, GLOBAL_LOGGER)
+        channels_ids = tuple(range(SIGNALS_LEN))
+
+        X, s, y, sampling_rate = dataset.load_with_subjectid(path, rest, channels_ids)
+        test_X, test_s, test_y, sampling_rate = dataset.load_with_subjectid(path, test_subject, channels_ids)
+
+        random.seed(seed)
+        
+        x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+        s_val, s_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+
+        for channel_id in range(len(channels_ids)):
+            signal = X[channel_id]
+            id = s[channel_id]
+
+            num_rows = len(signal)
+            split_size = num_rows // 4
+
+            combined_list = list(zip(signal, id))
+            random.shuffle(combined_list)
+            shuffled_signal, shuffled_id = zip(*combined_list)
+
+            for i in range(split_size):
+                x_val[channel_id].append(shuffled_signal[i])
+                s_val[channel_id].append(shuffled_id[i])
+            for i in range(split_size,num_rows):
+                x_train[channel_id].append(shuffled_signal[i])
+                s_train[channel_id].append(shuffled_id[i])
+
+        x_train = [np.expand_dims(np.array(x), 2) for x in x_train]
+        x_val = [np.expand_dims(np.array(x), 2) for x in x_val]
+        x_test = [np.expand_dims(np.array(x), 2) for x in test_X]
+
+        s_train = [np.expand_dims(np.array(s), 2) for s in s_train]
+        s_val = [np.expand_dims(np.array(s), 2) for s in s_val]
+
+        if type(X) == list:
+            input_shapes = [x.shape[1:] for x in x_train]
+        else:
+            input_shapes = x_train.shape[1:]
+
+        ndft_arr = [get_ndft(x) for x in sampling_rate]
+
+        if len(input_shapes) != len(ndft_arr):
+            raise Exception("Different sizes of input_shapes and ndft_arr")
+
+        for i in range(len(input_shapes)):
+            if input_shapes[i][0] < ndft_arr[i]:
+                raise Exception(
+                    f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
+    
+        with Graph().as_default():
+            session = get_new_session()
+            with session.as_default():
+                with tf.device('/device:GPU:0'):
+                    session.run(tf.compat.v1.global_variables_initializer())
+
+                    X_encoded = []
+                    test_X_encoded = []
+                    # s_list = []
+
+                    for channel_id, input_shape in enumerate(input_shapes):
+                        print('x test:', x_test[channel_id].shape)
+                        autoencoder = Autoencoder(input_shape)
+                        autoencoder.compile(loss='mean_squared_error', 
+                            optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)))
+                        mini_batch_size = int(min(x_train[0].shape[0] / 10, 16))
+                        autoencoder.fit(x_train[channel_id], x_train[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
+                            validation_data=(x_val[channel_id], x_val[channel_id]),
+                            callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='val_loss')], shuffle=True)
+                        encoded_x_train = autoencoder.encoder(x_train[channel_id]).eval()
+                        encoded_x_val = autoencoder.encoder(x_val[channel_id]).eval()
+                        encoded_x_test = autoencoder.encoder(x_test[channel_id]).eval()
+                        # print('encoded x train:', encoded_x_train.shape)
+                        # print('encoded x val:', encoded_x_val.shape)
+                        print('encoded x test:', encoded_x_test.shape)
+
+                        X_encoded.append(np.vstack((encoded_x_train, encoded_x_val)))
+                        test_X_encoded.append(encoded_x_test)
+
+                        # s_train_list = [s_train[0][i,0,0] for i in range(s_train[channel_id].shape[0])]
+                        # s_val_list = [s_val[0][i,0,0] for i in range(s_val[channel_id].shape[0])]
+                        # s_list.extend(s_train_list+s_val_list)
+                        # print(len(s_train_list + s_val_list))
+
+        X_encoded_df = pd.DataFrame(np.concatenate(X_encoded, axis=1))
+        test_X_encoded_df = pd.DataFrame(np.concatenate(test_X_encoded, axis=1))
+        s_train_list = [s_train[0][i,0,0] for i in range(s_train[0].shape[0])]
+        s_val_list = [s_val[0][i,0,0] for i in range(s_val[0].shape[0])]
+        s_list = s_train_list + s_val_list
+        X_encoded_df['pnum'] = s_list
+        test_X_encoded_df['pnum'] = test_subject[0]
+        
+        X_encoded_df.to_csv(f'./archives/KEmoWork/encoding_results_{test_subject}.csv', sep=',')
+
+        # file_path = "./archives/{0}/feature_clustering_results.csv".format("KEmoWork")
+        # file = pd.read_csv(file_path)
+        # X_encoded_df = pd.DataFrame(file)
+
+        scaler = MinMaxScaler()
+        scaler.fit(X_encoded_df.iloc[:,:-1])
+        X_encoded_scaled = scaler.transform(X_encoded_df.iloc[:,:-1])
+        test_X_encoded_scaled = scaler.transform(test_X_encoded_df.iloc[:,:-1])
+
+        silhouette_scores = []
+        possible_K_values = [i for i in range(2,6)]
+
+        for each_value in possible_K_values:
+            clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+            cluster_labels = clusterer.fit_predict(X_encoded_scaled)
+            silhouette_scores.append(silhouette_score(X_encoded_scaled, cluster_labels))
+
+        k_value = silhouette_scores.index(min(silhouette_scores))
+        clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+        cluster_labels = clusterer.fit_predict(X_encoded_scaled)
+        X_encoded_df['cluster'] = list(cluster_labels)
+
+        X_encoded_df.to_csv(f'./archives/KEmoWork/feature_clustering_results_{test_subject}.csv', sep=',')
+
+        cluster_list = [[] for _ in range(possible_K_values[k_value])]
+
+        for subject_id in rest:
+            X_subject = X_encoded_df.loc[X_encoded_df['pnum']==subject_id,:]
+            cluster_mode = stats.mode(X_subject['cluster'])[0]
+            cluster_list[cluster_mode].append(subject_id)
+
+        test_cluster_labels = clusterer.predict(test_X_encoded_scaled)
+        test_cluster = stats.mode(test_cluster_labels)[0]
+
+        print('cluster list:', cluster_list)
+        print('test cluster:', test_cluster)
+
+        for idx, cluster in enumerate(cluster_list):
+            if idx == test_cluster:
+                rest = [x for x in rest if x in cluster]
+                val_set = random.sample(rest, math.ceil(len(rest) / 5))
+                train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
+
+        result.append({"train": train_set, "val": val_set, "test": test_subject})
+
+    print(result)
+        
+    return result

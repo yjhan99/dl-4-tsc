@@ -2,6 +2,7 @@
 results
 csvresults
 results_cluster
+results_test
 *.pkl
 *.DS_Store
 *.ipynb
