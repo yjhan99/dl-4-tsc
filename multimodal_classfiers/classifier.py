@@ -79,4 +79,8 @@ def get_multipliers(channels_no, hyperparameters: Hyperparameters):
 
 
 def reshape_samples(samples):
+    # for x in samples:
+    #     print('x:')
+    #     print(x.shape)
+    #     print(x.shape[0], 2, round(x.shape[1] / 2), 1)
     return [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in samples]
