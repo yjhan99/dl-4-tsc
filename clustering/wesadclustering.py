@@ -244,7 +244,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
             rest_subject_closest.append(rest_subject)
         _, rest_subject_closest = map(list, zip(*sorted(zip(distances_to_clusters, rest_subject_closest))))
 
-        cluster_list = rest_subject_closest[:math.ceil(len(rest_subject_closest)/5)]
+        # cluster_list = rest_subject_closest[:math.ceil(len(rest_subject_closest)/5)]
+        cluster_list = rest_subject_closest[:math.ceil(len(rest_subject_closest)/2)]
         val_set = random.sample(cluster_list, math.ceil(len(cluster_list) / 5))
         train_set = [x for x in rest if (x not in val_set) & (x in cluster_list)]
 

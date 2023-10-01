@@ -1,6 +1,8 @@
 import keras
 
-from multimodal_classfiers.classifier import Classifier, get_multipliers
+# from multimodal_classfiers.classifier import Classifier, get_multipliers
+from classifier_finetuning import Classifier
+
 
 class ClassifierResnet(Classifier):
     def build_model(self, input_shapes, nb_classes, hyperparameters):

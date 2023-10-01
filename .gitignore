@@ -4,6 +4,7 @@ csvresults
 results_cluster
 results_test
 encodedresults
+encodedresults_old
 *.pkl
 *.DS_Store
 *.ipynb

@@ -8,7 +8,7 @@ import tensorflow as tf
 from filelock import Timeout, FileLock
 from tensorflow import Graph
 
-from arpreprocessing.dataset import Dataset 
+from arpreprocessing.dataset import Dataset
 from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
 from multimodal_classfiers.encoder import ClassifierEncoder
 from multimodal_classfiers.fcn import ClassifierFcn
@@ -145,7 +145,7 @@ class Experiment(ABC):
                                            hyperparameters=hyperparameters, model_init=model_init)
             self.logger_obj.info(
                 f"Created model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
-            classifier.fit(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
+            classifier.fit_finetuning(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
                            x_test=setup.x_test, nb_epochs=setup.nb_epochs_fn(classifier_name),
                            batch_size=setup.batch_size_fn(classifier_name))
             self.logger_obj.info(
@@ -246,4 +246,4 @@ def prepare_experimental_setups_n_iterations(self_experiment: Experiment, train_
     for i in range(iterations):
         self_experiment.experimental_setups.append(
             get_experimental_setup(self_experiment.logger_obj, tuple(range(self_experiment.no_channels)),
-                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name))
+                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name, seed=5))

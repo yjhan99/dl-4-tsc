@@ -95,7 +95,7 @@ class Experiment(ABC):
         self.logger_obj = logger
         self.experimental_setups = None
         self.no_channels = no_channels
-        self.experiment_path = f"results_test/{self.dataset_name}{dataset_name_suffix}"
+        self.experiment_path = f"results_cluster/{self.dataset_name}{dataset_name_suffix}"
 
         self.prepare_experimental_setups()
 
