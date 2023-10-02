@@ -1,7 +1,7 @@
 import keras
 
-from multimodal_classfiers.classifier import Classifier
-from classifier_finetuning import Classifier
+# from multimodal_classfiers.classifier import Classifier
+from multimodal_classfiers_finetuning.classifier_finetuning import Classifier
 
 
 class ClassifierMlp(Classifier):

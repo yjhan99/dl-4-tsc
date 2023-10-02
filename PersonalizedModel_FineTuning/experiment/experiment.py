@@ -9,17 +9,28 @@ from filelock import Timeout, FileLock
 from tensorflow import Graph
 
 from arpreprocessing.dataset import Dataset
-from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
-from multimodal_classfiers.encoder import ClassifierEncoder
-from multimodal_classfiers.fcn import ClassifierFcn
-from multimodal_classfiers.hyperparameters import Hyperparameters
-from multimodal_classfiers.inception_time import ClassifierInception
-from multimodal_classfiers.mcdcnn import ClassifierMcdcnn
-from multimodal_classfiers.mlp import ClassifierMlp
-from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
-from multimodal_classfiers.resnet import ClassifierResnet
-from multimodal_classfiers.stresnet import ClassifierStresnet
-from multimodal_classfiers.time_cnn import ClassifierTimeCnn
+# from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
+from multimodal_classfiers_finetuning.cnn_lstm import ClassifierCnnLstm
+# from multimodal_classfiers.encoder import ClassifierEncoder
+from multimodal_classfiers_finetuning.encoder import ClassifierEncoder
+# from multimodal_classfiers.fcn import ClassifierFcn
+from multimodal_classfiers_finetuning.fcn import ClassifierFcn
+# from multimodal_classfiers.hyperparameters import Hyperparameters
+from multimodal_classfiers_finetuning.hyperparameters import Hyperparameters
+# from multimodal_classfiers.inception_time import ClassifierInception
+from multimodal_classfiers_finetuning.inception_time import ClassifierInception
+# from multimodal_classfiers.mcdcnn import ClassifierMcdcnn
+from multimodal_classfiers_finetuning.mcdcnn import ClassifierMcdcnn
+# from multimodal_classfiers.mlp import ClassifierMlp
+from multimodal_classfiers_finetuning.mlp import ClassifierMlp
+# from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
+from multimodal_classfiers_finetuning.mlp_lstm import ClassifierMlpLstm
+# from multimodal_classfiers.resnet import ClassifierResnet
+from multimodal_classfiers_finetuning.resnet import ClassifierResnet
+# from multimodal_classfiers.stresnet import ClassifierStresnet
+from multimodal_classfiers_finetuning.stresnet import ClassifierStresnet
+# from multimodal_classfiers.time_cnn import ClassifierTimeCnn
+from multimodal_classfiers_finetuning.time_cnn import ClassifierTimeCnn
 from utils.utils import get_new_session, prepare_data
 
 CLASSIFIERS = ("mcdcnnM", "cnnM", "mlpM", "fcnM", "encoderM", "resnetM", "inceptionM", "stresnetM", "mlpLstmM",
@@ -246,4 +257,4 @@ def prepare_experimental_setups_n_iterations(self_experiment: Experiment, train_
     for i in range(iterations):
         self_experiment.experimental_setups.append(
             get_experimental_setup(self_experiment.logger_obj, tuple(range(self_experiment.no_channels)),
-                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name, seed=5))
+                                   test_ids, train_ids, val_ids, f"it_{i:02d}", self_experiment.dataset_name))

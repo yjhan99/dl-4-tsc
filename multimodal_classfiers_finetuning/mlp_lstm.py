@@ -1,7 +1,7 @@
 import keras
 
 # from multimodal_classfiers.classifier import Classifier, reshape_samples
-from classifier_finetuning import Classifier, reshape_samples
+from multimodal_classfiers_finetuning.classifier_finetuning import Classifier, reshape_samples
 
 
 class ClassifierMlpLstm(Classifier):

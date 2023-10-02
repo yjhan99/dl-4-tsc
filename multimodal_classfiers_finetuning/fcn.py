@@ -1,7 +1,8 @@
 import keras
 
 # from multimodal_classfiers.classifier import get_multipliers, Classifier
-from classifier_finetuning import get_multipliers, Classifier
+from multimodal_classfiers_finetuning.classifier_finetuning import get_multipliers, Classifier
+
 
 class ClassifierFcn(Classifier):
     def build_model(self, input_shapes, nb_classes, hyperparameters):

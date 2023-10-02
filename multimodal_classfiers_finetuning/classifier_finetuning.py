@@ -2,6 +2,7 @@ import time
 from abc import ABC, abstractmethod
 
 import numpy as np
+import tensorflow as tf
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 # from keras.optimizers import Adam
 from keras.optimizers.legacy import Adam
@@ -34,7 +35,8 @@ class Classifier(ABC):
     def create_callbacks(self):
         file_path = self.output_directory + 'best_model.hdf5'
         model_checkpoint = ModelCheckpoint(filepath=file_path, monitor='val_loss', save_best_only=True,
-                                           save_weights_only=True)
+                                        #    save_weights_only=True)
+                                           save_weights_only=False)
         self.callbacks.append(model_checkpoint)
 
         reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=self.hyperparameters.reduce_lr_factor,
@@ -61,16 +63,25 @@ class Classifier(ABC):
 
         GLOBAL_LOGGER.info(f"Loading weights and predicting")
 
-        self.model.load_weights(self.output_directory + 'best_model.hdf5')
+        # self.model.load_weights(self.output_directory + 'best_model.hdf5')
+        new_model = tf.keras.models.load_model(self.output_directory + 'best_model.hdf5')
 
         # Fine tuning starts here
         GLOBAL_LOGGER.info("Fine tuning")
 
-        for layer in self.model.layers[:-1]:
-            layer.trainable = False
-        self.model.layers[-1].trainable = True
+        # for layer in self.model.layers[:-1]:
+        #     layer.trainable = False
+        # self.model.layers[-1].trainable = True
 
-        self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-5), metric=['accuracy'])
+        # self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-5), metrics=['accuracy'])
+
+        for layer in new_model.layers[:-1]:
+            layer.trainable = False
+        new_model.layers[-1].trainable = True
+
+        new_model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-5), metrics=['accuracy'])
+
+        # TODO: 마지막 layer만 학습..
         
         # Create a dictionary to store indices for each label in y
         indices_by_label = defaultdict(list)
@@ -79,28 +90,37 @@ class Classifier(ABC):
 
         samples_per_label = 4 # Number of samples to pick from each label
 
-        selected_indices_x = []
-        selected_indices_y = []
-        leftover_indices_x = []
-        leftover_indices_y = []
+        selected_x = []
+        leftover_x = []
+        
+        for idx, x_test_i in enumerate(x_test):
+            selected_indices_x = []
+            selected_indices_y = []
+            leftover_indices_x = []
+            leftover_indices_y = []
 
-        for label, indices in indices_by_label.items():
-            selected_indices = random.sample(indices, min(samples_per_label, len(indices)))
-            selected_indices_x.extend(selected_indices)
-            selected_indices_y.extend([label] * len(selected_indices))
+            for label, indices in indices_by_label.items():
+                selected_indices = random.sample(indices, min(samples_per_label, len(indices)))
+                selected_indices_x.extend(selected_indices)
+                selected_indices_y.extend([label] * len(selected_indices))
 
-            leftover_indices = list(set(indices) - set(selected_indices))
-            leftover_indices_x.extend(leftover_indices)
-            leftover_indices_y.extend([label] * len(leftover_indices))
+                leftover_indices = list(set(indices) - set(selected_indices))
+                leftover_indices_x.extend(leftover_indices)
+                leftover_indices_y.extend([label] * len(leftover_indices))
 
-        selected_x = [x_test[i] for i in selected_indices_x]
-        selected_y = [y_true[i] for i in selected_indices_x]
-        leftover_x = [x_test[i] for i in leftover_indices_x]
-        leftover_y = [y_true[i] for i in leftover_indices_x]
+            if idx == 0:
+                selected_y = [y_true[i] for i in selected_indices_y]
+                leftover_y = [y_true[i] for i in leftover_indices_y]
+
+            temp_selected_x = x_test_i[selected_indices_x,:,:]
+            selected_x.append(temp_selected_x)
+            temp_leftover_x = x_test_i[leftover_indices_x,:,:]
+            leftover_x.append(temp_leftover_x)
 
         mini_batch_size = int(min(selected_x[0].shape[0] / 10, batch_size))
         
-        hist_tune = self.model.fit(selected_x, selected_y, batch_size=mini_batch_size, epochs=nb_epochs, verbose=self.verbose, shuffle=shuffle)
+        hist_tune = new_model.fit(selected_x, selected_y, batch_size=mini_batch_size, epochs=nb_epochs+10,
+                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, shuffle=shuffle)
 
         y_pred_probabilities = self.model.predict(leftover_x)
 
