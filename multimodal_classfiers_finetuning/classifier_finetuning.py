@@ -9,10 +9,48 @@ from keras.optimizers.legacy import Adam
 
 from multimodal_classfiers.hyperparameters import Hyperparameters
 from utils.loggerwrapper import GLOBAL_LOGGER
-from utils.utils import save_logs_no_val
+from utils.utils import save_logs_no_val, save_logs
 
 import random
 from collections import defaultdict
+
+
+def select_data(samples_per_label, y_list, y_array, x): # samples_per_label = Number of samples to pick from each label
+    # Create a dictionary to store indices for each label in y
+    indices_by_label = defaultdict(list)
+    for i, label in enumerate(y_list):
+        indices_by_label[label].append(i)
+
+    selected_x = []
+    leftover_x = []
+    
+    for idx, x_test_i in enumerate(x):
+        selected_indices_x = []
+        selected_indices_y = []
+        leftover_indices_x = []
+        leftover_indices_y = []
+
+        for label, indices in indices_by_label.items():
+            selected_indices = random.sample(indices, min(samples_per_label, len(indices)))
+            selected_indices_x.extend(selected_indices)
+            selected_indices_y.extend([label] * len(selected_indices))
+
+            leftover_indices = list(set(indices) - set(selected_indices))
+            leftover_indices_x.extend(leftover_indices)
+            leftover_indices_y.extend([label] * len(leftover_indices))
+
+        if idx == 0:
+            selected_y_array = np.array(y_array[selected_indices_y,:])
+            selected_y_list = [y_list[i] for i in selected_indices_y]
+            leftover_y_array = np.array(y_array[leftover_indices_y,:])
+            leftover_y_list = [y_list[i] for i in leftover_indices_y]
+
+        temp_selected_x = np.array(x_test_i[selected_indices_x,:,:])
+        selected_x.append(temp_selected_x)
+        temp_leftover_x = np.array(x_test_i[leftover_indices_x,:,:])
+        leftover_x.append(temp_leftover_x)
+
+    return selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list
 
 
 class Classifier(ABC):
@@ -68,45 +106,17 @@ class Classifier(ABC):
         self.model.layers[-1].trainable = True
 
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
+
+        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(7, y_true, y_test_tuning, x_test)
+
+        x_train_tuning, x_val_tuning, y_train_tuning, _, y_val_tuning, _ = select_data(5, selected_y_list, selected_y_array, selected_x)
+
+        # mini_batch_size = int(min(x_train_tuning[0].shape[0] / 10, batch_size))
+        mini_batch_size=2
         
-        # Create a dictionary to store indices for each label in y
-        indices_by_label = defaultdict(list)
-        for i, label in enumerate(y_true):
-            indices_by_label[label].append(i)
-
-        samples_per_label = 4 # Number of samples to pick from each label
-
-        selected_x = []
-        leftover_x = []
-        
-        for idx, x_test_i in enumerate(x_test):
-            selected_indices_x = []
-            selected_indices_y = []
-            leftover_indices_x = []
-            leftover_indices_y = []
-
-            for label, indices in indices_by_label.items():
-                selected_indices = random.sample(indices, min(samples_per_label, len(indices)))
-                selected_indices_x.extend(selected_indices)
-                selected_indices_y.extend([label] * len(selected_indices))
-
-                leftover_indices = list(set(indices) - set(selected_indices))
-                leftover_indices_x.extend(leftover_indices)
-                leftover_indices_y.extend([label] * len(leftover_indices))
-
-            if idx == 0:
-                selected_y = np.array(y_test_tuning[selected_indices_y,:])
-                leftover_y = [y_true[i] for i in leftover_indices_y]
-
-            temp_selected_x = np.array(x_test_i[selected_indices_x,:,:])
-            selected_x.append(temp_selected_x)
-            temp_leftover_x = np.array(x_test_i[leftover_indices_x,:,:])
-            leftover_x.append(temp_leftover_x)
-
-        mini_batch_size = int(min(selected_x[0].shape[0] / 10, batch_size))
-        
-        hist_tune = self.model.fit(selected_x, selected_y, batch_size=mini_batch_size, epochs=nb_epochs+10,
-                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, shuffle=shuffle)
+        hist_tune = self.model.fit(x_train_tuning, y_train_tuning, batch_size=mini_batch_size, epochs=nb_epochs+10,
+                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, 
+                                   validation_data=(x_val_tuning, y_val_tuning), callbacks=self.callbacks, shuffle=shuffle)
         
         GLOBAL_LOGGER.info(f"Loading weights and predicting")
         
@@ -116,7 +126,8 @@ class Classifier(ABC):
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
-        return save_logs_no_val(self.output_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y, duration)
+        # return save_logs_no_val(self.output_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
+        return save_logs(self.output_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
 
 
 def get_multipliers(channels_no, hyperparameters: Hyperparameters):

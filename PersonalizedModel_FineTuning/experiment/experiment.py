@@ -223,7 +223,7 @@ class Experiment(ABC):
                 f"Fitted model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
 
             os.makedirs(done_dict_path)
-            self._clean_up_files(output_directory)
+            # self._clean_up_files(output_directory)
             self.logger_obj.info("Finished e" + logging_message[1:])
 
             return classifier.model
