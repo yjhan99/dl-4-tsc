@@ -101,40 +101,40 @@ class NoSuchClassifier(Exception):
         self.message = "No such classifier: {}".format(classifier_name)
 
 
-def create_classifier(classifier_name, input_shapes, nb_classes, output_directory, verbose=False,
+def create_classifier(classifier_name, input_shapes, nb_classes, output_directory, output_tuning_directory, verbose=False,
                       sampling_rates=None, ndft_arr=None, hyperparameters=None, model_init=None):
     if classifier_name == 'fcnM':
-        return ClassifierFcn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierFcn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                              model_init=model_init)
     if classifier_name == 'mlpM':
-        return ClassifierMlp(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMlp(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                              model_init=model_init)
     if classifier_name == 'resnetM':
-        return ClassifierResnet(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierResnet(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                 model_init=model_init)
     if classifier_name == 'encoderM':
-        return ClassifierEncoder(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierEncoder(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'mcdcnnM':
-        return ClassifierMcdcnn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMcdcnn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                 model_init=model_init)
     if classifier_name == 'cnnM':
-        return ClassifierTimeCnn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierTimeCnn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'inceptionM':
         depth = hyperparameters.depth if hyperparameters and hyperparameters.depth else 6
-        return ClassifierInception(output_directory, input_shapes, nb_classes, depth=depth, verbose=verbose,
+        return ClassifierInception(output_directory, output_tuning_directory, input_shapes, nb_classes, depth=depth, verbose=verbose,
                                    hyperparameters=hyperparameters, model_init=model_init)
     if classifier_name == 'stresnetM':
-        return ClassifierStresnet(output_directory, input_shapes, sampling_rates,
+        return ClassifierStresnet(output_directory, output_tuning_directory, input_shapes, sampling_rates,
                                   ndft_arr, nb_classes, verbose=verbose,
                                   hyperparameters=hyperparameters,
                                   model_init=model_init)
     if classifier_name == 'cnnLstmM':
-        return ClassifierCnnLstm(output_directory, input_shapes, nb_classes, hyperparameters=hyperparameters,
+        return ClassifierCnnLstm(output_directory, output_tuning_directory, input_shapes, nb_classes, hyperparameters=hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'mlpLstmM':
-        return ClassifierMlpLstm(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMlpLstm(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
 
     raise NoSuchClassifier(classifier_name)
@@ -167,6 +167,7 @@ class Experiment(ABC):
         self.experimental_setups = None
         self.no_channels = no_channels
         self.experiment_path = f"results/{self.dataset_name}{dataset_name_suffix}"
+        self.experiment_tuning_path = f"results_tuning/{self.dataset_name}{dataset_name_suffix}"
 
         self.prepare_experimental_setups()
 
@@ -189,15 +190,17 @@ class Experiment(ABC):
                     for setup in self.experimental_setups:
                         output_directory = f"{self.experiment_path}/{iteration}/{classifier_name}/{setup.name}/"
                         os.makedirs(output_directory, exist_ok=True)
+                        output_tuning_directory = f"{self.experiment_tuning_path}/{iteration}/{classifier_name}/{setup.name}/"
+                        os.makedirs(output_tuning_directory, exist_ok=True)
 
                         try:
                             session.run(tf.compat.v1.global_variables_initializer())
-                            model_init = self.perform_single_experiment(classifier_name, output_directory, setup,
+                            model_init = self.perform_single_experiment(classifier_name, output_directory, output_tuning_directory, setup,
                                                                         iteration, hyperparameters, model_init)
                         except Timeout:
                             self.logger_obj.info("Experiment is being performed by another process")
 
-    def perform_single_experiment(self, classifier_name: str, output_directory: str, setup: ExperimentalSetup,
+    def perform_single_experiment(self, classifier_name: str, output_directory: str, output_tuning_directory: str, setup: ExperimentalSetup,
                                   iteration, hyperparameters: Hyperparameters, model_init):
         logging_message = "Experiment for {} dataset, classifier: {}, setup: {}, iteration: {}".format(
             self.dataset_name, classifier_name, setup.name, iteration)
@@ -210,8 +213,7 @@ class Experiment(ABC):
                 return
 
             classifier = create_classifier(classifier_name, setup.input_shapes, setup.nb_classes,
-                                           output_directory,
-                                           verbose=False,
+                                           output_directory, output_tuning_directory, verbose=False,
                                            sampling_rates=setup.sampling_val, ndft_arr=setup.ndft_arr,
                                            hyperparameters=hyperparameters, model_init=model_init)
             self.logger_obj.info(
@@ -257,7 +259,8 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
     experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, y_test_tuning, input_shapes,
-                                           sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
+                                        #    sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
+                                           sampling_val, ndft_arr, nb_classes, lambda x: 50, get_batch_size)
     return experimental_setup
 
 
