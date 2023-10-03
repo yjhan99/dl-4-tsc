@@ -31,7 +31,66 @@ from multimodal_classfiers_finetuning.resnet import ClassifierResnet
 from multimodal_classfiers_finetuning.stresnet import ClassifierStresnet
 # from multimodal_classfiers.time_cnn import ClassifierTimeCnn
 from multimodal_classfiers_finetuning.time_cnn import ClassifierTimeCnn
-from utils.utils import get_new_session, prepare_data
+from utils.utils import get_new_session
+
+import sklearn
+from sklearn.preprocessing import LabelEncoder
+
+
+def transform_labels(y_train, y_test, y_val=None):
+    """
+    Transform label to min equal zero and continuous
+    For example if we have [1,3,4] --->  [0,1,2]
+    """
+    if not y_val is None:
+        # index for when resplitting the concatenation
+        idx_y_val = len(y_train)
+        idx_y_test = idx_y_val + len(y_val)
+        # init the encoder
+        encoder = LabelEncoder()
+        # concat train and test to fit
+        y_train_val_test = np.concatenate((y_train, y_val, y_test), axis=0)
+        # fit the encoder
+        encoder.fit(y_train_val_test)
+        # transform to min zero and continuous labels
+        new_y_train_val_test = encoder.transform(y_train_val_test)
+        # resplit the train and test
+        new_y_train = new_y_train_val_test[0:idx_y_val]
+        new_y_val = new_y_train_val_test[idx_y_val:idx_y_test]
+        new_y_test = new_y_train_val_test[idx_y_test:]
+        return new_y_train, new_y_val, new_y_test
+    else:
+        # no validation split
+        # init the encoder
+        encoder = LabelEncoder()
+        # concat train and test to fit
+        y_train_test = np.concatenate((y_train, y_test), axis=0)
+        # fit the encoder
+        encoder.fit(y_train_test)
+        # transform to min zero and continuous labels
+        new_y_train_test = encoder.transform(y_train_test)
+        # resplit the train and test
+        new_y_train = new_y_train_test[0:len(y_train)]
+        new_y_test = new_y_train_test[len(y_train):]
+        return new_y_train, new_y_test
+    
+
+def prepare_data(x_train, y_train, y_val, y_test):
+    y_train, y_val, y_test = transform_labels(y_train, y_test, y_val=y_val)
+    y_true = y_val.astype(np.int64)
+    concatenated_ys = np.concatenate((y_train, y_val, y_test), axis=0)
+    nb_classes = len(np.unique(concatenated_ys))
+    enc = sklearn.preprocessing.OneHotEncoder()
+    enc.fit(concatenated_ys.reshape(-1, 1))
+    y_train = enc.transform(y_train.reshape(-1, 1)).toarray()
+    y_val = enc.transform(y_val.reshape(-1, 1)).toarray()
+    y_test_tuning = enc.transform(y_test.reshape(-1, 1)).toarray()
+    if type(x_train) == list:
+        input_shapes = [x.shape[1:] for x in x_train]
+    else:
+        input_shapes = x_train.shape[1:]
+    return input_shapes, nb_classes, y_val, y_train, y_test, y_test_tuning
+
 
 CLASSIFIERS = ("mcdcnnM", "cnnM", "mlpM", "fcnM", "encoderM", "resnetM", "inceptionM", "stresnetM", "mlpLstmM",
                "cnnLstmM")
@@ -82,7 +141,7 @@ def create_classifier(classifier_name, input_shapes, nb_classes, output_director
 
 
 class ExperimentalSetup():
-    def __init__(self, name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes, sampling_val, ndft_arr,
+    def __init__(self, name, x_train, y_train, x_val, y_val, x_test, y_test, y_test_tuning, input_shapes, sampling_val, ndft_arr,
                  nb_classes, nb_ecpochs_fn, batch_size_fn):
         self.name = name
         self.x_train = x_train
@@ -91,6 +150,7 @@ class ExperimentalSetup():
         self.y_val = y_val
         self.x_test = x_test
         self.y_test = y_test
+        self.y_test_tuning = y_test_tuning
         self.input_shapes = input_shapes
         self.sampling_val = sampling_val
         self.ndft_arr = ndft_arr
@@ -156,7 +216,7 @@ class Experiment(ABC):
                                            hyperparameters=hyperparameters, model_init=model_init)
             self.logger_obj.info(
                 f"Created model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
-            classifier.fit_finetuning(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
+            classifier.fit_finetuning(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test, setup.y_test_tuning,
                            x_test=setup.x_test, nb_epochs=setup.nb_epochs_fn(classifier_name),
                            batch_size=setup.batch_size_fn(classifier_name))
             self.logger_obj.info(
@@ -186,7 +246,7 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
     x_train = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_test]
-    input_shapes, nb_classes, y_val, y_train, y_test, y_true = prepare_data(x_train, y_train, y_val, y_test)
+    input_shapes, nb_classes, y_val, y_train, y_test, y_test_tuning = prepare_data(x_train, y_train, y_val, y_test)
     ndft_arr = [get_ndft(x) for x in sampling_test]
 
     if len(input_shapes) != len(ndft_arr):
@@ -196,7 +256,7 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
         if input_shapes[i][0] < ndft_arr[i]:
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
-    experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes,
+    experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, y_test_tuning, input_shapes,
                                            sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
     return experimental_setup
 

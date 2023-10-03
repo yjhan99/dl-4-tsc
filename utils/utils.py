@@ -172,7 +172,7 @@ def save_logs_no_val(output_directory, hist, y_pred, y_pred_probabilities, y_tru
     index_best_model = hist_df['loss'].idxmin()
     row_best_model = hist_df.loc[index_best_model]
 
-    df_best_model = pd.DataFrame(data=np.zeros((1, 6), dtype=float), index=[0],
+    df_best_model = pd.DataFrame(data=np.zeros((1, 4), dtype=float), index=[0],
                                  columns=['best_model_train_loss', 'best_model_train_acc',
                                           'best_model_learning_rate', 'best_model_nb_epoch'])
 
@@ -188,7 +188,7 @@ def save_logs_no_val(output_directory, hist, y_pred, y_pred_probabilities, y_tru
     df_best_model.to_csv(output_directory + 'df_best_model.csv', index=False)
 
     # plot losses
-    plot_epochs_metric(hist, output_directory + 'epochs_loss.png')
+    plot_epochs_metric_no_val(hist, output_directory + 'epochs_loss.png')
     plot_predictions(y_pred, y_true, output_directory + 'predictions.png')
     save_predictions(y_true, y_pred, y_pred_probabilities, f"{output_directory}predictions.txt")
 
@@ -219,6 +219,17 @@ def plot_epochs_metric(hist, file_name, metric='loss'):
     ax.set_ylabel(metric, fontsize='large')
     ax.set_xlabel('epoch', fontsize='large')
     ax.legend(['train', 'val'], loc='upper left')
+    fig.savefig(file_name, bbox_inches='tight')
+    plt.close(fig)
+
+
+def plot_epochs_metric_no_val(hist, file_name, metric='loss'):
+    fig, ax = plt.subplots()
+    ax.plot(hist.history[metric])
+    ax.set_title('model ' + metric)
+    ax.set_ylabel(metric, fontsize='large')
+    ax.set_xlabel('epoch', fontsize='large')
+    ax.legend(['train'], loc='upper left')
     fig.savefig(file_name, bbox_inches='tight')
     plt.close(fig)
 
