@@ -121,6 +121,7 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     return result
 
 
+# Sangjun's method
 def n_fold_split_cluster_feature(subject_ids, n, seed=5):
     test_sets = [subject_ids[i::n] for i in range(n)]
 
@@ -200,10 +201,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
 
                         X_encoded = []
                         test_X_encoded = []
-                        # s_list = []
 
                         for channel_id, input_shape in enumerate(input_shapes):
-                            # print('x test:', x_test[channel_id].shape)
                             autoencoder = Autoencoder(input_shape)
                             autoencoder.compile(loss='mean_squared_error', 
                                 optimizer=keras.optimizers.legacy.Adam(lr=0.003, decay=math.exp(-6)))
@@ -211,12 +210,9 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
                             history = autoencoder.fit(x_train[channel_id], x_train[channel_id], batch_size=mini_batch_size, epochs=100, verbose=False,
                                 validation_data=(x_val[channel_id], x_val[channel_id]),
                                 callbacks=[keras.callbacks.EarlyStopping(patience=30, monitor='val_loss')], shuffle=True)
-                            # print(history.history['loss'])
-                            # print(history.history['val_loss'])
                             encoded_x_train = autoencoder.encoder(x_train[channel_id]).eval()
                             encoded_x_val = autoencoder.encoder(x_val[channel_id]).eval()
                             encoded_x_test = autoencoder.encoder(x_test[channel_id]).eval()
-                            # print('encoded x test:', encoded_x_test.shape)
 
                             X_encoded.append(np.vstack((encoded_x_train, encoded_x_val)))
                             test_X_encoded.append(encoded_x_test)
@@ -259,37 +255,38 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
         cluster_X_df.reset_index(inplace=True)
 
         cluster_test_X = test_X_encoded_df['cluster'].value_counts().to_dict()
-        # cluster_df = cluster_X_df.append(cluster_test_X)
         cluster_df = pd.concat([cluster_X_df, pd.DataFrame([cluster_test_X])], ignore_index=True).fillna(0).astype(int)
-
-        # scaler = MinMaxScaler()
-        # scaler.fit(cluster_df.iloc[:,1:])
-        # cluster_X_df_scaled = scaler.transform(cluster_df.iloc[:,1:])
 
         silhouette_scores = []
         possible_K_values = [i for i in range(2,6)]
 
         for each_value in possible_K_values:
             clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
-            cluster_labels = clusterer.fit_predict(cluster_df.iloc[:,1:])
-            silhouette_scores.append(silhouette_score(cluster_df.iloc[:,1:], cluster_labels))
+            cluster_labels = clusterer.fit_predict(cluster_df.iloc[:-1,1:])
+            silhouette_scores.append(silhouette_score(cluster_df.iloc[:-1,1:], cluster_labels))
 
         k_value = silhouette_scores.index(min(silhouette_scores))
         clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
-        cluster_labels = clusterer.fit_predict(cluster_df.iloc[:,1:])
-        print(cluster_df.iloc[:,1:])
-        print('final cluster labels:', list(cluster_labels))
+        cluster_labels = clusterer.fit(cluster_df.iloc[:-1,1:])
+        rest_cluster_label = clusterer.predict(cluster_df.iloc[:-1,1:])
+        test_cluster_label = clusterer.predict(cluster_df.iloc[-1,1:].to_numpy().reshape(1,-1))
+        print('rest cluster labels:', rest_cluster_label)
+        print('test cluster labels:', test_cluster_label)
 
         same_cluster = []
-        for subject, cluster in zip(rest, cluster_labels[:-1]):
-            if cluster == cluster_labels[-1]:
+        for subject, cluster in zip(rest, rest_cluster_label):
+            if cluster == test_cluster_label:
                 same_cluster.append(subject)
-        
-        print('same cluster with test cluster:', same_cluster)
+        print('same cluster:', same_cluster)
 
-        # val_set = random.sample(same_cluster, math.ceil(len(rest) / 5))
-        # train_set = [x for x in rest if (x not in val_set) & (x in same_cluster)]
-        # result.append({"train": train_set, "val": val_set, "test": test_subject})
+        if len(same_cluster) == 1:
+            val_set = same_cluster
+            train_set = same_cluster
+        else:            
+            val_set = random.sample(same_cluster, math.ceil(len(same_cluster) / 4))
+            train_set = [x for x in rest if (x not in val_set) & (x in same_cluster)]
+        print('final:', {"train": train_set, "val": val_set, "test": test_subject})
+        result.append({"train": train_set, "val": val_set, "test": test_subject})
 
     print(result)
         

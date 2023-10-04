@@ -31,16 +31,13 @@ def select_data(samples_per_label, y_list, y_array, x): # samples_per_label = Nu
         leftover_indices_y = []
 
         for label, indices in indices_by_label.items():
-            # selected_indices = random.sample(indices, min(samples_per_label, len(indices)))
             selected_indices = indices[:samples_per_label]
             selected_indices_x.extend(selected_indices)
             selected_indices_y.extend(selected_indices)
-            # selected_indices_y.extend([label] * len(selected_indices))
 
             leftover_indices = list(set(indices) - set(selected_indices))
             leftover_indices_x.extend(leftover_indices)
             leftover_indices_y.extend(leftover_indices)
-            # leftover_indices_y.extend([label] * len(leftover_indices))
 
         if idx == 0:
             selected_y_array = np.array(y_array[selected_indices_y,:])
@@ -137,8 +134,6 @@ class Classifier(ABC):
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
 
         selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(7, y_true, y_test_tuning, x_test)
-        print(selected_y_list)
-        print(leftover_y_list)
 
         x_train_tuning, x_val_tuning, y_train_tuning, _, y_val_tuning, _ = select_data(5, selected_y_list, selected_y_array, selected_x)
 
