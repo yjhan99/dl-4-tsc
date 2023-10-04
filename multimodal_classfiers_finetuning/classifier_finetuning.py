@@ -9,7 +9,7 @@ from keras.optimizers.legacy import Adam
 
 from multimodal_classfiers.hyperparameters import Hyperparameters
 from utils.loggerwrapper import GLOBAL_LOGGER
-from utils.utils import save_logs_no_val, save_logs
+from utils.utils import save_logs
 
 import random, os
 from collections import defaultdict
