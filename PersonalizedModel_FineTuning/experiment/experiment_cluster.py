@@ -9,18 +9,88 @@ from filelock import Timeout, FileLock
 from tensorflow import Graph
 
 from arpreprocessing.dataset import Dataset
-from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
-from multimodal_classfiers.encoder import ClassifierEncoder
-from multimodal_classfiers.fcn import ClassifierFcn
-from multimodal_classfiers.hyperparameters import Hyperparameters
-from multimodal_classfiers.inception_time import ClassifierInception
-from multimodal_classfiers.mcdcnn import ClassifierMcdcnn
-from multimodal_classfiers.mlp import ClassifierMlp
-from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
-from multimodal_classfiers.resnet import ClassifierResnet
-from multimodal_classfiers.stresnet import ClassifierStresnet
-from multimodal_classfiers.time_cnn import ClassifierTimeCnn
-from utils.utils import get_new_session, prepare_data
+# from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
+from multimodal_classfiers_finetuning.cnn_lstm import ClassifierCnnLstm
+# from multimodal_classfiers.encoder import ClassifierEncoder
+from multimodal_classfiers_finetuning.encoder import ClassifierEncoder
+# from multimodal_classfiers.fcn import ClassifierFcn
+from multimodal_classfiers_finetuning.fcn import ClassifierFcn
+# from multimodal_classfiers.hyperparameters import Hyperparameters
+from multimodal_classfiers_finetuning.hyperparameters import Hyperparameters
+# from multimodal_classfiers.inception_time import ClassifierInception
+from multimodal_classfiers_finetuning.inception_time import ClassifierInception
+# from multimodal_classfiers.mcdcnn import ClassifierMcdcnn
+from multimodal_classfiers_finetuning.mcdcnn import ClassifierMcdcnn
+# from multimodal_classfiers.mlp import ClassifierMlp
+from multimodal_classfiers_finetuning.mlp import ClassifierMlp
+# from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
+from multimodal_classfiers_finetuning.mlp_lstm import ClassifierMlpLstm
+# from multimodal_classfiers.resnet import ClassifierResnet
+from multimodal_classfiers_finetuning.resnet import ClassifierResnet
+# from multimodal_classfiers.stresnet import ClassifierStresnet
+from multimodal_classfiers_finetuning.stresnet import ClassifierStresnet
+# from multimodal_classfiers.time_cnn import ClassifierTimeCnn
+from multimodal_classfiers_finetuning.time_cnn import ClassifierTimeCnn
+from utils.utils import get_new_session
+
+import sklearn
+from sklearn.preprocessing import LabelEncoder
+
+
+def transform_labels(y_train, y_test, y_val=None):
+    """
+    Transform label to min equal zero and continuous
+    For example if we have [1,3,4] --->  [0,1,2]
+    """
+    if not y_val is None:
+        # index for when resplitting the concatenation
+        idx_y_val = len(y_train)
+        idx_y_test = idx_y_val + len(y_val)
+        # init the encoder
+        encoder = LabelEncoder()
+        # concat train and test to fit
+        y_train_val_test = np.concatenate((y_train, y_val, y_test), axis=0)
+        # fit the encoder
+        encoder.fit(y_train_val_test)
+        # transform to min zero and continuous labels
+        new_y_train_val_test = encoder.transform(y_train_val_test)
+        # resplit the train and test
+        new_y_train = new_y_train_val_test[0:idx_y_val]
+        new_y_val = new_y_train_val_test[idx_y_val:idx_y_test]
+        new_y_test = new_y_train_val_test[idx_y_test:]
+        return new_y_train, new_y_val, new_y_test
+    else:
+        # no validation split
+        # init the encoder
+        encoder = LabelEncoder()
+        # concat train and test to fit
+        y_train_test = np.concatenate((y_train, y_test), axis=0)
+        # fit the encoder
+        encoder.fit(y_train_test)
+        # transform to min zero and continuous labels
+        new_y_train_test = encoder.transform(y_train_test)
+        # resplit the train and test
+        new_y_train = new_y_train_test[0:len(y_train)]
+        new_y_test = new_y_train_test[len(y_train):]
+        return new_y_train, new_y_test
+    
+
+def prepare_data(x_train, y_train, y_val, y_test):
+    y_train, y_val, y_test = transform_labels(y_train, y_test, y_val=y_val)
+    y_true = y_val.astype(np.int64)
+    concatenated_ys = np.concatenate((y_train, y_val, y_test), axis=0)
+    nb_classes = len(np.unique(concatenated_ys))
+    enc = sklearn.preprocessing.OneHotEncoder()
+    enc.fit(concatenated_ys.reshape(-1, 1))
+    y_train = enc.transform(y_train.reshape(-1, 1)).toarray()
+    y_val = enc.transform(y_val.reshape(-1, 1)).toarray()
+    y_test_tuning = enc.transform(y_test.reshape(-1, 1)).toarray()
+    if type(x_train) == list:
+        input_shapes = [x.shape[1:] for x in x_train]
+    else:
+        input_shapes = x_train.shape[1:]
+    return input_shapes, nb_classes, y_val, y_train, y_test, y_test_tuning
+
 
 CLASSIFIERS = ("mcdcnnM", "cnnM", "mlpM", "fcnM", "encoderM", "resnetM", "inceptionM", "stresnetM", "mlpLstmM",
                "cnnLstmM")
@@ -31,47 +101,47 @@ class NoSuchClassifier(Exception):
         self.message = "No such classifier: {}".format(classifier_name)
 
 
-def create_classifier(classifier_name, input_shapes, nb_classes, output_directory, verbose=False,
+def create_classifier(classifier_name, input_shapes, nb_classes, output_directory, output_tuning_directory, verbose=False,
                       sampling_rates=None, ndft_arr=None, hyperparameters=None, model_init=None):
     if classifier_name == 'fcnM':
-        return ClassifierFcn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierFcn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                              model_init=model_init)
     if classifier_name == 'mlpM':
-        return ClassifierMlp(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMlp(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                              model_init=model_init)
     if classifier_name == 'resnetM':
-        return ClassifierResnet(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierResnet(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                 model_init=model_init)
     if classifier_name == 'encoderM':
-        return ClassifierEncoder(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierEncoder(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'mcdcnnM':
-        return ClassifierMcdcnn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMcdcnn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                 model_init=model_init)
     if classifier_name == 'cnnM':
-        return ClassifierTimeCnn(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierTimeCnn(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'inceptionM':
         depth = hyperparameters.depth if hyperparameters and hyperparameters.depth else 6
-        return ClassifierInception(output_directory, input_shapes, nb_classes, depth=depth, verbose=verbose,
+        return ClassifierInception(output_directory, output_tuning_directory, input_shapes, nb_classes, depth=depth, verbose=verbose,
                                    hyperparameters=hyperparameters, model_init=model_init)
     if classifier_name == 'stresnetM':
-        return ClassifierStresnet(output_directory, input_shapes, sampling_rates,
+        return ClassifierStresnet(output_directory, output_tuning_directory, input_shapes, sampling_rates,
                                   ndft_arr, nb_classes, verbose=verbose,
                                   hyperparameters=hyperparameters,
                                   model_init=model_init)
     if classifier_name == 'cnnLstmM':
-        return ClassifierCnnLstm(output_directory, input_shapes, nb_classes, hyperparameters=hyperparameters,
+        return ClassifierCnnLstm(output_directory, output_tuning_directory, input_shapes, nb_classes, hyperparameters=hyperparameters,
                                  model_init=model_init)
     if classifier_name == 'mlpLstmM':
-        return ClassifierMlpLstm(output_directory, input_shapes, nb_classes, verbose, hyperparameters,
+        return ClassifierMlpLstm(output_directory, output_tuning_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
 
     raise NoSuchClassifier(classifier_name)
 
 
 class ExperimentalSetup():
-    def __init__(self, name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes, sampling_val, ndft_arr,
+    def __init__(self, name, x_train, y_train, x_val, y_val, x_test, y_test, y_test_tuning, input_shapes, sampling_val, ndft_arr,
                  nb_classes, nb_ecpochs_fn, batch_size_fn):
         self.name = name
         self.x_train = x_train
@@ -80,6 +150,7 @@ class ExperimentalSetup():
         self.y_val = y_val
         self.x_test = x_test
         self.y_test = y_test
+        self.y_test_tuning = y_test_tuning
         self.input_shapes = input_shapes
         self.sampling_val = sampling_val
         self.ndft_arr = ndft_arr
@@ -96,7 +167,8 @@ class Experiment(ABC):
         self.experimental_setups = None
         self.no_channels = no_channels
         self.experiment_path = f"results_cluster/{self.dataset_name}{dataset_name_suffix}"
-
+        self.experiment_tuning_path = f"results_cluster_tuning/{self.dataset_name}{dataset_name_suffix}"
+        
         self.prepare_experimental_setups()
 
     @abstractmethod
@@ -118,15 +190,18 @@ class Experiment(ABC):
                     for setup in self.experimental_setups:
                         output_directory = f"{self.experiment_path}/{iteration}/{classifier_name}/{setup.name}/"
                         os.makedirs(output_directory, exist_ok=True)
+                        output_tuning_directory = f"{self.experiment_tuning_path}/{iteration}/{classifier_name}/{setup.name}/"
+                        os.makedirs(output_tuning_directory, exist_ok=True)
+
 
                         try:
                             session.run(tf.compat.v1.global_variables_initializer())
-                            model_init = self.perform_single_experiment(classifier_name, output_directory, setup,
+                            model_init = self.perform_single_experiment(classifier_name, output_directory, output_tuning_directory, setup,
                                                                         iteration, hyperparameters, model_init)
                         except Timeout:
                             self.logger_obj.info("Experiment is being performed by another process")
 
-    def perform_single_experiment(self, classifier_name: str, output_directory: str, setup: ExperimentalSetup,
+    def perform_single_experiment(self, classifier_name: str, output_directory: str, output_tuning_directory: str, setup: ExperimentalSetup,
                                   iteration, hyperparameters: Hyperparameters, model_init):
         logging_message = "Experiment for {} dataset, classifier: {}, setup: {}, iteration: {}".format(
             self.dataset_name, classifier_name, setup.name, iteration)
@@ -139,20 +214,19 @@ class Experiment(ABC):
                 return
 
             classifier = create_classifier(classifier_name, setup.input_shapes, setup.nb_classes,
-                                           output_directory,
-                                           verbose=False,
+                                           output_directory, output_tuning_directory, verbose=False,
                                            sampling_rates=setup.sampling_val, ndft_arr=setup.ndft_arr,
                                            hyperparameters=hyperparameters, model_init=model_init)
             self.logger_obj.info(
                 f"Created model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
-            classifier.fit(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
+            classifier.fit_finetuning(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test, setup.y_test_tuning,
                            x_test=setup.x_test, nb_epochs=setup.nb_epochs_fn(classifier_name),
                            batch_size=setup.batch_size_fn(classifier_name))
             self.logger_obj.info(
                 f"Fitted model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
 
             os.makedirs(done_dict_path)
-            self._clean_up_files(output_directory)
+            # self._clean_up_files(output_directory)
             self.logger_obj.info("Finished e" + logging_message[1:])
 
             return classifier.model
@@ -165,17 +239,15 @@ class Experiment(ABC):
 
 
 def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name):
-    # path = "archives/mts_archive/"
     path = "archives/mts_archive"
     dataset = Dataset(dataset_name, None, logger_obj)
     x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
     x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
     x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
-    # print(np.array(x_train[0]).ndim)
     x_train = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_test]
-    input_shapes, nb_classes, y_val, y_train, y_test, y_true = prepare_data(x_train, y_train, y_val, y_test)
+    input_shapes, nb_classes, y_val, y_train, y_test, y_test_tuning = prepare_data(x_train, y_train, y_val, y_test)
     ndft_arr = [get_ndft(x) for x in sampling_test]
 
     if len(input_shapes) != len(ndft_arr):
@@ -185,8 +257,8 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
         if input_shapes[i][0] < ndft_arr[i]:
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
-    experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes,
-                                           sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
+    experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, y_test_tuning, input_shapes,
+                                           sampling_val, ndft_arr, nb_classes, lambda x: 100, get_batch_size)
     return experimental_setup
 
 

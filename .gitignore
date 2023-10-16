@@ -4,6 +4,7 @@ csvresults
 results_cluster
 results_test
 results_tuning
+results_cluster_tuning
 encodedresults
 encodedresults_old
 *.pkl

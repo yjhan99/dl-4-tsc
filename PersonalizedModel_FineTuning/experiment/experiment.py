@@ -238,13 +238,11 @@ class Experiment(ABC):
 
 
 def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name):
-    # path = "archives/mts_archive/"
     path = "archives/mts_archive"
     dataset = Dataset(dataset_name, None, logger_obj)
     x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
     x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
     x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
-    # x_train = [np.array(x, dtype=object)[:,:,np.newaxis] for x in x_train]
     x_train = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_test]

@@ -21,7 +21,7 @@ def datasets_metrics():
 
         for architecture in ['fcnM', 'cnnM', 'resnetM', 'mlpLstmM']:
             # for eval_i in range(10):
-            for eval_i in range(5):
+            for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
 

@@ -186,7 +186,8 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
     experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes,
-                                           sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
+                                           sampling_val, ndft_arr, nb_classes, lambda x: 100, get_batch_size)
+                                        #    sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
     return experimental_setup
 
 
