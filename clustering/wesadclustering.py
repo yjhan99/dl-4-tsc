@@ -121,7 +121,6 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     return result
 
 
-# Sangjun's method
 def n_fold_split_cluster_feature(subject_ids, n, seed=5):
     test_sets = [subject_ids[i::n] for i in range(n)]
 
@@ -283,7 +282,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
             val_set = same_cluster
             train_set = same_cluster
         else:            
-            val_set = random.sample(same_cluster, math.ceil(len(same_cluster) / 4))
+            # val_set = random.sample(same_cluster, math.ceil(len(same_cluster) / 4))
+            val_set = random.sample(same_cluster, math.ceil(len(same_cluster) / 5))
             train_set = [x for x in rest if (x not in val_set) & (x in same_cluster)]
         print('final:', {"train": train_set, "val": val_set, "test": test_subject})
         result.append({"train": train_set, "val": val_set, "test": test_subject})

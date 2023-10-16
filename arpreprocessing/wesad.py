@@ -109,7 +109,7 @@ class WesadSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 40, 20): # 60sec*4Hz window and 30sec*4Hz sliding
+        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 40, 20): # 10sec*4Hz window and 5sec*4Hz sliding
         # for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]

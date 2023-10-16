@@ -96,8 +96,8 @@ class Classifier(ABC):
         #                               patience=self.hyperparameters.reduce_lr_patience)
         # self.callbacks.append(reduce_lr)
 
-        # early_stopping = EarlyStopping(patience=15)
-        # self.callbacks.append(early_stopping)
+        early_stopping = EarlyStopping(patience=15)
+        self.callbacks.append(early_stopping)
 
     def get_optimizer(self):
         return Adam(lr=self.hyperparameters.lr, decay=self.hyperparameters.decay)

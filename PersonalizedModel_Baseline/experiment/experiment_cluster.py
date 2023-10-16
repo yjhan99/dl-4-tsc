@@ -186,7 +186,8 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
             y_val_indices = []
 
             for label, indices in indices_by_label.items():
-                selected_indices = indices[math.ceil(len(y)/4):len(y)]
+                # selected_indices = indices[math.ceil(len(y)/4):len(y)]
+                selected_indices = indices[math.ceil(len(y)/5):len(y)]
                 x_train_indices.extend(selected_indices)
 
                 leftover_indices = list(set(indices) - set(selected_indices))
