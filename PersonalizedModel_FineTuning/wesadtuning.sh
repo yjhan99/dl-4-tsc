@@ -1,5 +1,6 @@
 # This script was created because of probable memory leakage in version of tensorflow/keras used in this project
-for clas in fcnM resnetM cnnM mlpLstmM; do
+# for clas in fcnM resnetM cnnM mlpLstmM; do
+for clas in fcnM; do
   for dataset in wesad; do
     # for max_eval in $(seq 1 5); do
     for max_eval in $(seq 1 1); do

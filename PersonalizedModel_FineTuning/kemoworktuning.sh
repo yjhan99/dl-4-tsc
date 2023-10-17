@@ -1,6 +1,5 @@
 # This script was created because of probable memory leakage in version of tensorflow/keras used in this project
 for clas in fcnM resnetM cnnM mlpLstmM; do
-# for clas in mlpLstmM; do
   for dataset in kemowork; do
     for max_eval in $(seq 1 1); do
       # for i_fold in 00 01 02 03 04; do
