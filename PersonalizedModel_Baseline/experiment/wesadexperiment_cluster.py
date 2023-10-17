@@ -8,9 +8,9 @@ SIGNALS_LEN = 14
 class WesadExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
         # Cluster specific (trait-based)
-        # folds = n_fold_split_cluster_trait(Wesad.SUBJECTS_IDS, n, "WESAD", seed=seed)
+        folds = n_fold_split_cluster_trait(Wesad.SUBJECTS_IDS, n, "WESAD", seed=seed)
         # Cluster specific (feature-based)
-        folds = n_fold_split_cluster_feature(Wesad.SUBJECTS_IDS, n, seed=seed)
+        # folds = n_fold_split_cluster_feature(Wesad.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         # print(self.test_ids)
