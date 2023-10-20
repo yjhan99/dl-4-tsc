@@ -63,6 +63,25 @@ def prepare_data(x_train, y_train, y_val, y_test):
     return input_shapes, nb_classes, y_val, y_train, y_test, y_true
 
 
+def prepare_data_mtl(x_test, y_task_rest, y_task_test, y_test):
+    y_task_rest, y_task_test, y_test = transform_labels_mtl(y_task_rest, y_test, y_task_test)
+    y_true = y_test.astype(np.int64)
+    concatenated_ys = np.concatenate((y_test, y_task_test), axis=0)
+    for y_task_rest_i in y_task_rest:
+        concatenated_ys = np.concatenate((concatenated_ys, y_task_rest_i), axis=0)
+    nb_classes = len(np.unique(concatenated_ys))
+    enc = sklearn.preprocessing.OneHotEncoder()
+    enc.fit(concatenated_ys.reshape(-1, 1))
+    y_task_test = enc.transform(y_task_test.reshape(-1, 1)).toarray()
+    for idx, y_task_rest_i in enumerate(y_task_rest):
+        y_task_rest[idx] = enc.transform(y_task_rest_i.reshape(-1, 1)).toarray()
+    if type(x_test) == list:
+        input_shapes = [x.shape[1:] for x in x_test]
+    else:
+        input_shapes = x_test.shape[1:]
+    return input_shapes, nb_classes, y_task_rest, y_task_test, y_test, y_true
+
+
 def set_available_gpus(gpu_ids):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = gpu_ids
@@ -124,6 +143,31 @@ def transform_labels(y_train, y_test, y_val=None):
         new_y_train = new_y_train_test[0:len(y_train)]
         new_y_test = new_y_train_test[len(y_train):]
         return new_y_train, new_y_test
+    
+
+def transform_labels_mtl(y_task_rest, y_test, y_task_test):
+    """
+    Transform label to min equal zero and continuous
+    For example if we have [1,3,4] --->  [0,1,2]
+    """
+    idx_y_test = len(y_test)
+    idx_y_task_test = idx_y_test + len(y_task_test)
+    idx_y_task_rest = []
+    encoder = LabelEncoder()
+    y_all = np.concatenate((y_test, y_task_test), axis=0)
+    for y_task_rest_i in y_task_rest:
+        y_all = np.concatenate((y_all, y_task_rest_i), axis=0)
+        idx_y_task_rest.append(len(y_task_rest_i))
+    encoder.fit(y_all)
+    new_y_all = encoder.transform(y_all)
+    new_y_test = new_y_all[0:idx_y_test]
+    new_y_task_test = new_y_all[idx_y_test:idx_y_task_test]
+    new_y_task_rest = []
+    upto = idx_y_task_test
+    for idx in idx_y_task_rest:
+        new_y_task_rest.append(new_y_all[idx_y_task_test:upto+idx])
+        upto += idx
+    return new_y_task_rest, new_y_test, new_y_task_test
 
 
 def save_logs(output_directory, hist, y_pred, y_pred_probabilities, y_true, duration, lr=True, y_true_val=None,

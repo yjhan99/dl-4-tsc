@@ -89,7 +89,7 @@ def get_result(architecture, dataset, eval_i, setups):
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
         # yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-        yield f"results_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results_cluster_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
@@ -123,7 +123,7 @@ def count_test_classes_representation():
     for dataset in ["WESAD"]:
         y_num = []
         # result_path = "./results"
-        result_path = "./results_tuning"
+        result_path = "./results_cluster_tuning"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 

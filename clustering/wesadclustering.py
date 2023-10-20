@@ -318,14 +318,12 @@ def n_fold_split_mtl_cluster_trait(subject_ids, n, dataset_name, seed=5):
 
     for test_set in test_sets:
         if test_set[0] in subject_ids_male:
-            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            val_set = random.sample(rest, math.ceil(len(rest) / 5))
-            train_set = [x for x in rest if (x not in val_set) & (x in subject_ids_male)]
+            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
+            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
         else:
-            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
-            val_set = random.sample(rest, math.ceil(len(rest) / 5))
-            train_set = [x for x in rest if (x not in val_set) & (x in subject_ids_female)]    
-        result.append({"train": train_set, "val": val_set, "test": test_set})
+            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
+            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
+        result.append({"task_rest": task_rest, "task_test": task_test, "test": test_set})
 
     print(result)
 
