@@ -26,7 +26,7 @@ class Classifier(ABC):
         self.create_callbacks()
 
     @abstractmethod
-    def build_model(self, input_shapes, nb_classes, hyperparameters):
+    def build_model(self, input_shapes, nb_classes, task_num, hyperparameters):
         pass
 
     def create_callbacks(self):
@@ -45,13 +45,15 @@ class Classifier(ABC):
     def get_optimizer(self):
         return Adam(lr=self.hyperparameters.lr, decay=self.hyperparameters.decay)
 
-    def fit(self, x_train, y_train, x_val, y_val, y_true, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True):
-        mini_batch_size = int(min(x_train[0].shape[0] / 10, batch_size))
+    def fit(self, x_task_rest, y_task_rest, x_task_test, y_task_test, y_true, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True, task_num=2):
+        mini_batch_size = int(min(x_task_test[0].shape[0] / 10, batch_size))
 
         GLOBAL_LOGGER.info("Fitting model")
 
         start_time = time.time()
 
+        # hist = self.model.fit(x_train, y_train, batch_size=mini_batch_size, epochs=nb_epochs, verbose=self.verbose,
+        #                       validation_data=(x_val, y_val), callbacks=self.callbacks, shuffle=shuffle)
         hist = self.model.fit(x_train, y_train, batch_size=mini_batch_size, epochs=nb_epochs, verbose=self.verbose,
                               validation_data=(x_val, y_val), callbacks=self.callbacks, shuffle=shuffle)
 

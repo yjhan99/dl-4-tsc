@@ -21,6 +21,3 @@ class WesadExperimentNFold(Experiment):
 
         Experiment.__init__(self, "WESAD", logger_obj, SIGNALS_LEN, dataset_name_suffix=f"_{n}fold_{i:02d}")
 
-    def prepare_experimental_setups(self):
-        prepare_experimental_setups_n_iterations(self, self.train_ids, self.val_ids, self.test_ids)
-

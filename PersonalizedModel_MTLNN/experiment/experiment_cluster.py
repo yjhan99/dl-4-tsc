@@ -117,9 +117,12 @@ class Experiment(ABC):
                                            hyperparameters=hyperparameters, model_init=model_init, task_num=setup.task_num)
             self.logger_obj.info(
                 f"Created model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
-            classifier.fit(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
+            # classifier.fit(setup.x_train, setup.y_train, setup.x_val, setup.y_val, setup.y_test,
+            #                x_test=setup.x_test, nb_epochs=setup.nb_epochs_fn(classifier_name),
+            #                batch_size=setup.batch_size_fn(classifier_name))
+            classifier.fit(setup.x_task_rest, setup.y_task_rest, setup.x_task_test, setup.y_task_test, setup.y_test,
                            x_test=setup.x_test, nb_epochs=setup.nb_epochs_fn(classifier_name),
-                           batch_size=setup.batch_size_fn(classifier_name))
+                           batch_size=setup.batch_size_fn(classifier_name), task_num=setup.task_num)
             self.logger_obj.info(
                 f"Fitted model for {self.dataset_name} dataset, classifier: {classifier_name}, setup: {setup.name}, iteration: {iteration}")
 

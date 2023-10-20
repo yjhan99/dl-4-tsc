@@ -32,10 +32,25 @@ class ClassifierMlp(Classifier):
             channel_outputs.append(output_layer)
 
         flat = keras.layers.concatenate(channel_outputs, axis=-1) if len(channel_outputs) > 1 else channel_outputs[0]
-        output_layer = keras.layers.Dense(nb_classes, activation='softmax')(flat)
+        # output_layer = keras.layers.Dense(nb_classes, activation='softmax')(flat)
 
-        model = keras.models.Model(inputs=input_layers, outputs=output_layer)
+        task_layers = {}
+        for i in range(task_num):
+            layer_name = f'task_{i}_layer'
+            layer = keras.layers.Dense(nb_classes, activation='relu')(flat)
+            layer = keras.layers.Dense(nb_classes, activation='softmax', name=f'task_{i}_output')(layer)
+            task_layers[layer_name] = layer
 
-        model.compile(loss='categorical_crossentropy', optimizer=self.get_optimizer(), metrics=['accuracy'])
+        loss_dict = {}
+        for i in range(task_num):
+            output_name = f'task_{i}_output'
+            loss_dict[output_name] = 'categorical_crossentropy'
+
+        # model = keras.models.Model(inputs=input_layers, outputs=output_layer)
+        model = keras.models.Model(inputs=input_layers, outputs=list(task_layers.keys()))
+
+        # model.compile(loss='categorical_crossentropy', optimizer=self.get_optimizer(), metrics=['accuracy'])
+        model.compile(loss=loss_dict, 
+                      optimizer=self.get_optimizer(), metrics=['accuracy'])
 
         return model
