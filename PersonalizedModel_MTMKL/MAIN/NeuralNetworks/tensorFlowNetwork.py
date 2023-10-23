@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 CODE_PATH = os.path.dirname(os.getcwd())
 sys.path.append(CODE_PATH)
 
-PATH_TO_DATA = '/Your/path/here/'
+# PATH_TO_DATA = '/Your/path/here/'
+PATH_TO_REPO = '/Your/path/here/'
 
 sys.path.append(PATH_TO_REPO)
 import helperFuncs as helper
@@ -34,7 +35,8 @@ def reloadHelper():
 	reload(helper)
 
 def weight_variable(shape,name):
-	initial = tf.truncated_normal(shape, stddev=1.0 / math.sqrt(float(shape[0])))
+	# initial = tf.truncated_normal(shape, stddev=1.0 / math.sqrt(float(shape[0])))
+	initial = tf.compat.v1.truncated_normal(shape, stddev=1.0 / math.sqrt(float(shape[0])))
 	return tf.Variable(initial, name=name)
 
 def bias_variable(shape, name):
@@ -60,7 +62,7 @@ def changeLabelsToOneHotEncoding(y, trinary=False):
 
 def getOneHotAccuracy(predictions, labels):
 	if len(predictions) == 0:
-		print "no predictions, returning"
+		print( "no predictions, returning")
 		return np.nan
 	return (1.0 * np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1))
 		  / predictions.shape[0])
@@ -126,9 +128,9 @@ def makeMetricListDict():
 
 def _print_if_saved_setting_differs(class_var, setting_name, npz_file):
 	if setting_name not in npz_file.keys():
-		print "ERROR! The setting", setting_name, "is not in the saved model file."
-		print "Using default value:", class_var
-		print ""
+		print( "ERROR! The setting", setting_name, "is not in the saved model file.")
+		print( "Using default value:", class_var)
+		print( "")
 		return False
 	
 	not_equal = False
@@ -143,20 +145,20 @@ def _print_if_saved_setting_differs(class_var, setting_name, npz_file):
 		not_equal = True
 		
 	if not_equal:
-		print "WARNING! Saved setting for", setting_name, "is different!"
-		print "\tModel's current value for", setting_name, "is", class_var
-		print "\tBut it was saved as", npz_file[setting_name]
-		print "Overwriting setting", setting_name, "with new value:", npz_file[setting_name]
-		print ""
+		print( "WARNING! Saved setting for", setting_name, "is different!")
+		print( "\tModel's current value for", setting_name, "is", class_var)
+		print( "\tBut it was saved as", npz_file[setting_name])
+		print( "Overwriting setting", setting_name, "with new value:", npz_file[setting_name])
+		print( "")
 	return True
 
 class TensorFlowNetwork:
 	def __init__(self, data_df, wanted_feats, wanted_labels, multilabel=False, optimize_labels=None, 
 				verbose=True, num_cross_folds=5, val_type=DEFAULT_VAL_TYPE):
 		if multilabel and optimize_labels is None:
-			print "ERROR! need to specify which labels to optimize over if you are doing multilabel classification"
+			print( "ERROR! need to specify which labels to optimize over if you are doing multilabel classification")
 
-		print "Normalizing, filling and randomizing data dataframe..."
+		print( "Normalizing, filling and randomizing data dataframe...")
 		self.data_df = helper.normalizeAndFillDataDf(data_df, wanted_feats, wanted_labels)
 		self.data_df = self.data_df.reindex(np.random.permutation(self.data_df.index))
 
@@ -166,7 +168,7 @@ class TensorFlowNetwork:
 		self.optimize_labels = optimize_labels
 		self.verbose = verbose
 
-		print "\nBuilding training/validation/testing matrices from data dataframe..."
+		print( "\nBuilding training/validation/testing matrices from data dataframe...")
 		self.train_X, self.train_y = helper.getTensorFlowMatrixData(self.data_df, wanted_feats, wanted_labels, dataset='Train', single_output=(not multilabel))
 		self.val_X, self.val_y = helper.getTensorFlowMatrixData(self.data_df, wanted_feats, wanted_labels, dataset='Val', single_output=(not multilabel))
 		self.test_X, self.test_y = helper.getTensorFlowMatrixData(self.data_df, wanted_feats, wanted_labels, dataset='Test', single_output=(not multilabel))
@@ -176,9 +178,9 @@ class TensorFlowNetwork:
 			self.val_y = changeLabelsToOneHotEncoding(self.val_y)
 			self.test_y = changeLabelsToOneHotEncoding(self.test_y)
 
-		print "\tTrain:", np.shape(self.train_X), np.shape(self.train_y)
-		print "\tVal:", np.shape(self.val_X), np.shape(self.val_y)
-		print "\tTest:", np.shape(self.test_X), np.shape(self.test_y)
+		print( "\tTrain:", np.shape(self.train_X), np.shape(self.train_y))
+		print( "\tVal:", np.shape(self.val_X), np.shape(self.val_y))
+		print( "\tTest:", np.shape(self.test_X), np.shape(self.test_y))
 
 		self.input_size = np.shape(self.train_X)[1]
 		self.output_size = np.shape(self.train_y)[1]
@@ -204,7 +206,8 @@ class TensorFlowNetwork:
 		self.decay_steps=10000
 		self.decay_rate=0.95
 		self.batch_size = DEFAULT_BATCH_SIZE
-		self.optimizer = tf.train.AdamOptimizer #can also be tf.train.AdagradOptimizer or tf.train.GradientDescentOptimizer 
+		# self.optimizer = tf.train.AdamOptimizer #can also be tf.train.AdagradOptimizer or tf.train.GradientDescentOptimizer 
+		self.optimizer = tf.compat.v1.train.AdamOptimizer #can also be tf.train.AdagradOptimizer or tf.train.GradientDescentOptimizer 
 		
 		#network structure and running stuff
 		self.list_hidden_sizes = [1024]
@@ -440,9 +443,9 @@ class TensorFlowNetwork:
 						batch_data = self.train_X[offset:(offset + self.batch_size), :]
 						batch_labels = self.train_y[offset:(offset + self.batch_size), :]
 					except:
-						print "It thinks it can't compute the offset."
-						print "trainY.shape[0]", self.train_y.shape[0],
-						print "self.batch_size", self.batch_size
+						print( "It thinks it can't compute the offset.")
+						print( "trainY.shape[0]", self.train_y.shape[0],)
+						print( "self.batch_size", self.batch_size)
 						batch_data = self.train_X
 						batch_labels = self.train_y
 
@@ -485,7 +488,7 @@ class TensorFlowNetwork:
 
 					if self.verbose and (step % ACCURACY_OUTPUT_EVERY_N_STEPS  == 0):
 						print("Minibatch loss at step %d: %f" % (step, l))
-						print ("Minibatch training accuracy:", train_acc, "AUC:", train_auc)
+						print( ("Minibatch training accuracy:", train_acc, "AUC:", train_auc))
 						if self.multilabel:
 							val_acc, val_auc, val_f1, val_precision, val_recall = self.getOverallResults()
 							print("Validation accuracy:", val_acc)
@@ -532,9 +535,9 @@ class TensorFlowNetwork:
 			test_df = test_df.dropna(subset=[wanted_label], how='any')
 			all_preds = test_df['test_pred_'+label_name].tolist()
 			all_true = test_df[wanted_label].tolist()
-			print "FINAL METRICS ON TEST SET for label", label_name, ":", helper.computeAllMetricsForPreds(all_preds, all_true)
+			print( "FINAL METRICS ON TEST SET for label", label_name, ":", helper.computeAllMetricsForPreds(all_preds, all_true))
 
-		print "Predictions have been computed and are stored in dataframe."
+		print( "Predictions have been computed and are stored in dataframe.")
 		return preds_df
 
 	def trainAndValidate(self):
@@ -570,7 +573,7 @@ class TensorFlowNetwork:
 			f1s.append(f1)
 			precisions.append(precision)
 			recalls.append(recall)
-		if PRINT_CROSS_VAL_FOLDS: print "\t\tPer-fold cross-validation accuracy: ", accs
+		if PRINT_CROSS_VAL_FOLDS: print( "\t\tPer-fold cross-validation accuracy: ", accs)
 		return np.nanmean(accs), np.nanmean(aucs), np.nanmean(f1s), np.nanmean(precisions), np.nanmean(recalls)
 
 	def save_model(self, file_name, directory):
@@ -580,7 +583,7 @@ class TensorFlowNetwork:
 		file_name: String name to use for the checkpoint and rewards files.
 		Defaults to self.model_name if None is provided.
 		"""
-		if self.verbose: print "Saving model..."
+		if self.verbose: print( "Saving model...")
 		
 		save_dir = directory + file_name
 		os.mkdir(save_dir)
@@ -614,22 +617,22 @@ class TensorFlowNetwork:
 				rewards are saved. If None, will not attempt to load stored
 				rewards.
 		"""
-		print "-----Loading saved model-----"
+		print( "-----Loading saved model-----")
 		if checkpoint_name is not None:
 			checkpoint_file = os.path.join(directory, checkpoint_name)
 		else:
 			checkpoint_file = tf.train.latest_checkpoint(directory)
-		print "Looking for checkpoin in directory", directory
+		print( "Looking for checkpoin in directory", directory)
 
 		if checkpoint_file is None:
-			print "Error! Cannot locate checkpoint in the directory"
+			print( "Error! Cannot locate checkpoint in the directory")
 			return
 		else:
-			print "Found checkpoint file:", checkpoint_file
+			print( "Found checkpoint file:", checkpoint_file)
 
 		if npz_file_name is not None:
 			npz_file_name = os.path.join(directory, npz_file_name)
-			print "Attempting to load saved reward values from file", npz_file_name
+			print( "Attempting to load saved reward values from file", npz_file_name)
 			npz_file = np.load(npz_file_name)
 
 			self.training_val_results = npz_file['training_val_results'].item()

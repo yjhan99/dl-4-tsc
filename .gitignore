@@ -9,6 +9,9 @@ results_tuning
 results_cluster_tuning
 encodedresults
 encodedresults_old
+*.csv
+*.png
+*.p
 *.pkl
 *.DS_Store
 *.ipynb

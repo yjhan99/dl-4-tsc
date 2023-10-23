@@ -89,7 +89,9 @@ class WesadSubject(Subject):
     def restructure_data(data):
         new_data = {'label': np.array(data['label']), "signal": {}}
         for device in data['signal']:
+            print('device:', device)
             for type in data['signal'][device]:
+                print('type:', type)
                 for i in range(len(data['signal'][device][type][0])):
                     signal_name = '_'.join([device, type, str(i)])
                     signal = np.array([x[i] for x in data['signal'][device][type]])

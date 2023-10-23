@@ -36,7 +36,7 @@ parser.add_argument('--task_type', type=str, default='users',
 						 "outcomes (like stress, happiness, etc) are their "
 						 "own tasks.")
 parser.add_argument('--target_label', type=str, 
-					default='tomorrow_Happiness_Evening_Label',
+					default='y_Label',
 					help="Outcome label to predict for each user in "
 						 "users-as-tasks")
 parser.add_argument('--group_users_on', type=str, 
@@ -63,7 +63,7 @@ def getLabelTaskListFromDataset(datafile, subdivide_phys=True):
 	
 	for dataset in ['Train','Val','Test']:
 		task_dict_list = []
-		for target_label in wanted_labels: 
+		for target_label in wanted_labels:
 			mini_df = helper.normalizeAndFillDataDf(df, wanted_feats, [target_label], suppress_output=True)
 			mini_df.reindex(np.random.permutation(mini_df.index))
 				
@@ -78,6 +78,7 @@ def getLabelTaskListFromDataset(datafile, subdivide_phys=True):
 
 def getModalityDict(wanted_feats, subdivide_phys=False):
 	modalities = list(set([getFeatPrefix(x, subdivide_phys=subdivide_phys) for x in wanted_feats]))
+	print(modalities)
 	mod_dict = dict()
 	for modality in modalities:
 		mod_dict[modality] = getStartIndex(wanted_feats, modality)
@@ -95,11 +96,12 @@ def getStartIndex(wanted_feats, modality):
 def getFeatPrefix(feat_name, subdivide_phys=False):
 	idx = feat_name.find('_')
 	prefix = feat_name[0:idx]
-	if not subdivide_phys or prefix != 'phys':
-		return prefix
-	else:
-		idx = feat_name.find(':')
-		return feat_name[0:idx]
+	return feat_name[0:idx]
+	# if not subdivide_phys or prefix != 'phys':
+	# 	return prefix
+	# else:
+	# 	idx = feat_name.find(':')
+	# 	return feat_name[0:idx]
 
 def getUserTaskListFromDataset(datafile, target_label, suppress_output=False, 
 							   group_on='user_id', subdivide_phys=False):
@@ -113,13 +115,16 @@ def getUserTaskListFromDataset(datafile, target_label, suppress_output=False,
 	df = df.reindex(np.random.permutation(df.index))
 
 	dataset_name, datapath = getDatasetCoreNameAndPath(datafile)
-	label_name = helper.getFriendlyLabelName(target_label)
+	# label_name = helper.getFriendlyLabelName(target_label)
+	label_name = 'y'
 	
 	modality_dict = getModalityDict(wanted_feats, subdivide_phys=subdivide_phys)
 
 	train_task_dict_list = []
 	val_task_dict_list = []
 	test_task_dict_list = []
+
+	group_on = 'Cluster'
 	for user in df[group_on].unique(): 
 		if not suppress_output:
 			print("Processing task", user)

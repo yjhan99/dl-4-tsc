@@ -232,7 +232,7 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
             
             X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',')
             test_X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',')
-
+        
         # scaler = MinMaxScaler()
         # scaler.fit(X_encoded_df.iloc[:,:-1])
         # X_encoded_scaled = scaler.transform(X_encoded_df.iloc[:,:-1])
@@ -295,16 +295,24 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
         print('final:', {"train": train_set, "val": val_set, "test": test_subject})
 
         trainval = pd.read_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
+        column_prefixes = ['acc_1_chest', 'acc_2_chest', 'acc_3_chest', 'ecg_chest', 'emg_chest', 'eda_chest', 'temp_chest', 'rest_chest', 
+                           'acc_1_wrist', 'acc_2_wrist', 'acc_3_wrist', 'bvp_wrist', 'eda_wrist', 'temp_wrist']
+        repetitions = 4
+        new_columns = [f'{prefix} * {i+1}' for i in range(repetitions) for prefix in column_prefixes]
+        new_columns.append('pnum')
+        trainval.columns = new_columns
         trainval['user_id'] = trainval['pnum']
         cluster_dict = dict(zip(rest, rest_cluster_label))
         trainval['Cluster'] = trainval['pnum'].map(cluster_dict)
         trainval['y_Label'] = y
-        trainval['dataset'] = trainval['user_id'].apply(lambda x: np.random.choice(['train', 'val'], p=[0.8, 0.2]))
+        trainval['dataset'] = trainval['user_id'].apply(lambda x: np.random.choice(['Train', 'Val'], p=[0.8, 0.2]))
+
         test = pd.read_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',', index_col=0)
+        test.columns = new_columns
         test['user_id'] = test['pnum']
         test['Cluster'] = test_cluster_label[0]
         test['y_Label'] = test_y
-        test['dataset'] = 'test'
+        test['dataset'] = 'Test'
         FINAL = pd.concat([trainval, test], axis=0, ignore_index=True)
         FINAL.to_csv(f'./archives/MTL/WESAD/Feature/dataset_test_{test_subject}.csv', sep=",", index=False)
 

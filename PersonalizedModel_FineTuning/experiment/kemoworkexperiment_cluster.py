@@ -7,9 +7,9 @@ SIGNALS_LEN = 11
 class KEmoWorkExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
         # Cluster specific (trait-based)
-        folds = n_fold_split_cluster_trait(KEmoWork.SUBJECTS_IDS, n, "KEmoWork", seed=seed)
+        # folds = n_fold_split_cluster_trait(KEmoWork.SUBJECTS_IDS, n, "KEmoWork", seed=seed)
         # Cluster specific (feature-based)
-        # folds = n_fold_split_cluster_feature(KEmoWork.SUBJECTS_IDS, n, seed=seed)
+        folds = n_fold_split_cluster_feature(KEmoWork.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

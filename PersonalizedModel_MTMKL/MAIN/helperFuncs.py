@@ -432,7 +432,8 @@ def getSvmPartitionDf(data_df, wanted_feats, wanted_labels, dataset='Train'):
 def getTensorFlowMatrixData(data_df, wanted_feats, wanted_labels, dataset='Train',single_output=False):
 	set_df = data_df[data_df['dataset']==dataset]
 	
-	X = set_df[wanted_feats].astype(float).as_matrix()
+	# X = set_df[wanted_feats].astype(float).as_matrix()
+	X = set_df[wanted_feats].astype(float).to_numpy()
 
 	if single_output:
 		y = set_df[wanted_labels[0]].tolist()

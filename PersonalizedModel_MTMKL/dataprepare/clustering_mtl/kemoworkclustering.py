@@ -328,16 +328,23 @@ def n_fold_split_cluster_feature_kemowork(subject_ids, n, seed=5):
         print('final:', {"train": train_set, "val": val_set, "test": test_subject})
 
         trainval = pd.read_csv(f'./encodedresults/KEmoWork/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
+        column_prefixes = ['eda', 'eeg_1', 'eeg_2', 'eeg_3', 'eeg_4', 'temp', 'acc_1', 'acc_2', 'acc_3', 'bvp', 'ecg']
+        repetitions = 4
+        new_columns = [f'{prefix} * {i+1}' for i in range(repetitions) for prefix in column_prefixes]
+        new_columns.append('pnum')
+        trainval.columns = new_columns
         trainval['user_id'] = trainval['pnum']
         cluster_dict = dict(zip(rest, rest_cluster_label))
         trainval['Cluster'] = trainval['pnum'].map(cluster_dict)
         trainval['y_Label'] = y
-        trainval['dataset'] = trainval['user_id'].apply(lambda x: np.random.choice(['train', 'val'], p=[0.8, 0.2]))
+        trainval['dataset'] = trainval['user_id'].apply(lambda x: np.random.choice(['Train', 'Val'], p=[0.8, 0.2]))
+
         test = pd.read_csv(f'./encodedresults/KEmoWork/encoded_results_{test_subject}.csv', sep=',', index_col=0)
+        test.columns = new_columns
         test['user_id'] = test['pnum']
         test['Cluster'] = test_cluster_label[0]
         test['y_Label'] = test_y
-        test['dataset'] = 'test'
+        test['dataset'] = 'Test'
         FINAL = pd.concat([trainval, test], axis=0, ignore_index=True)
         FINAL.to_csv(f'./archives/MTL/KEmoWork/Feature/dataset_test_{test_subject}.csv', sep=",", index=False)
 

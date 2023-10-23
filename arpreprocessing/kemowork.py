@@ -98,8 +98,10 @@ class KEmoWorkSubject(SubjectLabel):
         # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
         new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
         for sensor in data['signal']:
+            print('sensor:', sensor)
             for i in range(len(data['signal'][sensor][0])):
                 signal_name = '_'.join([sensor, str(i)])
+                print(signal_name)
                 signal = np.array([x[i] for x in data['signal'][sensor]])
                 new_data["signal"][signal_name] = signal
         return new_data
