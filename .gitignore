@@ -10,6 +10,7 @@ results_cluster_tuning
 encodedresults
 encodedresults_old
 *.csv
+*.eps
 *.png
 *.p
 *.pkl

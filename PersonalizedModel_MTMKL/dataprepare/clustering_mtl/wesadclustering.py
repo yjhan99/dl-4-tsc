@@ -298,7 +298,7 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
         column_prefixes = ['acc_1_chest', 'acc_2_chest', 'acc_3_chest', 'ecg_chest', 'emg_chest', 'eda_chest', 'temp_chest', 'rest_chest', 
                            'acc_1_wrist', 'acc_2_wrist', 'acc_3_wrist', 'bvp_wrist', 'eda_wrist', 'temp_wrist']
         repetitions = 4
-        new_columns = [f'{prefix} * {i+1}' for i in range(repetitions) for prefix in column_prefixes]
+        new_columns = [f'{prefix} * {i+1}' for prefix in column_prefixes for i in range(repetitions)]
         new_columns.append('pnum')
         trainval.columns = new_columns
         trainval['user_id'] = trainval['pnum']

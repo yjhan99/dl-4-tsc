@@ -78,7 +78,7 @@ def getLabelTaskListFromDataset(datafile, subdivide_phys=True):
 
 def getModalityDict(wanted_feats, subdivide_phys=False):
 	modalities = list(set([getFeatPrefix(x, subdivide_phys=subdivide_phys) for x in wanted_feats]))
-	print(modalities)
+	print('modalities:',modalities)
 	mod_dict = dict()
 	for modality in modalities:
 		mod_dict[modality] = getStartIndex(wanted_feats, modality)
