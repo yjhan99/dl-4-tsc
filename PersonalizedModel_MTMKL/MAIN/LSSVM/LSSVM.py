@@ -49,11 +49,9 @@ class LSSVM:
 		assert np.shape(bottom_right)==(N,N), "The bottom left matrix is the wrong size"
 		
 		if self.debug:
-			print "K",K
-			print "K nans", np.sum(np.isnan(K))
+			print("K",K)
+			print("K nans", np.sum(np.isnan(K)))
 		
-
-
 		first_row = np.hstack([np.zeros((1,1)),self.y.T])
 		bottom_mat = np.hstack([self.y,bottom_right])
 		A = np.vstack([first_row,bottom_mat])
@@ -61,9 +59,10 @@ class LSSVM:
 		b_vec = np.vstack([0,np.ones((N,1))])
 
 		try:
-			params,residuals, rank,s = np.linalg.lstsq(A,b_vec)
+			# params,residuals, rank,s = np.linalg.lstsq(A,b_vec)
+			params,residuals, rank,s = np.linalg.lstsq(A,b_vec,rcond=-1)
 		except:
-			print "\n------WARNING!!!  These parameters didn't converge!------\n"
+			print("\n------WARNING!!!  These parameters didn't converge!------\n")
 			return False
 		
 		self.b = params[0]

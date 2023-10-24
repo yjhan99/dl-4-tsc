@@ -23,6 +23,10 @@ CODE_PATH = os.path.dirname(os.getcwd())
 sys.path.append(CODE_PATH)
 
 PATH_TO_DATA = '/Your/path/here/'
+PATH_TO_DATA = './DATASET/'
+
+# RESULTS_PATH = '/Your/path/here/'
+RESULTS_PATH = './RESULTS/'
 
 import helperFuncs as helper
 import tensorFlowNetwork as tfnet
@@ -367,8 +371,7 @@ class TensorFlowNetworkMTL:
 
 			# Optimizer.
 			with tf.name_scope("optimizer") as scope:
-				self.opt_step = self.optimizer(self.learning_rate).minimize(self.loss, 
-																			 global_step=self.global_step)
+				self.opt_step = self.optimizer(self.learning_rate).minimize(self.loss, global_step=self.global_step)
 
 			# Predictions for the training, validation, and test data.
 			with tf.name_scope("outputs") as scope:
@@ -566,6 +569,7 @@ class TensorFlowNetworkMTL:
 		test_y_true = np.array(test_y_true)
 		
 		#get rid of nans
+		num_test = len(test_y_hat)
 		num_nans_test = np.sum(np.isnan(test_y_hat))
 		total_test = np.shape(test_y_hat)[0] * np.shape(test_y_hat)[1]
 		nan_percent_test = (num_nans_test / float(total_test)) * 100.0
@@ -574,7 +578,18 @@ class TensorFlowNetworkMTL:
 		
 		print ("\nHELD OUT TEST METRICS COMPUTED BY APPENDING ALL PREDS")
 		acc, auc, f1, precision, recall = tfnet.getAllMetricsForPredsOneHot(test_y_hat, test_y_true)
-		print(("... Acc:", acc, "AUC:", auc, "F1:", f1, "Precision:", precision, "Recall:", recall) )
+		print(("... Acc:", acc, "AUC:", auc, "F1:", f1, "Precision:", precision, "Recall:", recall))
+
+		save_dict = {"Acc": acc, "AUC": auc, "F1": f1, "Precision": precision, "Recall": recall, "TestNum": num_test}
+		csv_file_path = RESULTS_PATH + 'TestResult.csv'
+		file_exist = os.path.isfile(csv_file_path)
+
+		if file_exist:
+			df = pd.read_csv(csv_file_path)
+			df = pd.concat([df, pd.DataFrame([save_dict])], ignore_index=True)
+		else:
+			df = pd.DataFrame([save_dict])
+		df.to_csv(csv_file_path, index=False)
 
 		print ("\nHELD OUT TEST METRICS COMPUTED BY AVERAGING OVER TASKS")
 		acc = np.nanmean(test_accs)
@@ -582,7 +597,7 @@ class TensorFlowNetworkMTL:
 		f1 = np.nanmean(test_f1s)
 		precision = np.nanmean(test_precisions)
 		recall = np.nanmean(test_recalls)
-		print(("... Acc:", acc, "AUC:", auc, "F1:", f1, "Precision:", precision, "Recall:", recall) )
+		print(("... Acc:", acc, "AUC:", auc, "F1:", f1, "Precision:", precision, "Recall:", recall))
 
 	def getTrainAndValDataFromTaskForCrossValFold(self, task, fold, only_train=False):
 		crossVal_X = self.train_tasks[task]['crossVal_X']

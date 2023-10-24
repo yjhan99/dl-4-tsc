@@ -328,7 +328,7 @@ def n_fold_split_cluster_feature_kemowork(subject_ids, n, seed=5):
         print('final:', {"train": train_set, "val": val_set, "test": test_subject})
 
         trainval = pd.read_csv(f'./encodedresults/KEmoWork/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
-        column_prefixes = ['eda', 'eeg_1', 'eeg_2', 'eeg_3', 'eeg_4', 'temp', 'acc_1', 'acc_2', 'acc_3', 'bvp', 'ecg']
+        column_prefixes = ['eda_', 'eeg_1', 'eeg_2', 'eeg_3', 'eeg_4', 'temp_', 'acc_1', 'acc_2', 'acc_3', 'bvp_', 'ecg_']
         repetitions = 4
         new_columns = [f'{prefix} * {i+1}' for prefix in column_prefixes for i in range(repetitions)]
         new_columns.append('pnum')

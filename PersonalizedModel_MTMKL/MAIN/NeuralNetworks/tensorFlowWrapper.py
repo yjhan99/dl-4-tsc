@@ -10,11 +10,11 @@ CODE_PATH = os.path.dirname(os.getcwd())
 sys.path.append(CODE_PATH)
 
 # DEFAULT_RESULTS_PATH = '/Your/path/here/'
-DEFAULT_RESULTS_PATH = './NeuralNetworks/RESULTS/'
+DEFAULT_RESULTS_PATH = './RESULTS/'
 # DEFAULT_DATASETS_PATH = '/Your/path/here/'
-DEFAULT_DATASETS_PATH = './NeuralNetworks/DATASET/'
+DEFAULT_DATASETS_PATH = './DATASET/'
 # DEFAULT_FIGURES_PATH = '/Your/path/here/'
-DEFAULT_FIGURES_PATH = './NeuralNetworks/FIGURES/'
+DEFAULT_FIGURES_PATH = './FIGURES/'
 
 DEFAULT_VAL_TYPE = 'cross'
 OUTPUT_EVERY_NTH = 3
@@ -35,7 +35,7 @@ def reloadFiles():
 
 class TensorFlowWrapper:
 	def __init__(self, dataset_name, target_label=None, trial_name=None, multilabel=False, multitask=False, 
-				 print_per_task=False, test_steps=9001, results_path=DEFAULT_RESULTS_PATH,
+				 print_per_task=False, test_steps=5001, results_path=DEFAULT_RESULTS_PATH,
 				 datasets_path=DEFAULT_DATASETS_PATH, figures_path=DEFAULT_FIGURES_PATH, val_output_file=None, 
 				 val_type=DEFAULT_VAL_TYPE, cont=False, architectures=None, test_csv_filename=None):
 		assert not(multilabel and multitask)
