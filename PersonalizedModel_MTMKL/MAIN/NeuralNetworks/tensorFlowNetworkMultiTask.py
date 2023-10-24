@@ -551,7 +551,7 @@ class TensorFlowNetworkMTL:
 				print ("\tauc:", auc)
 				print ("\tf1:", f1)
 				print ("\tprecision:", precision)
-				print ("\trecall:", recall					)
+				print ("\trecall:", recall)
 			
 			test_accs.append(acc)
 			test_aucs.append(auc)
