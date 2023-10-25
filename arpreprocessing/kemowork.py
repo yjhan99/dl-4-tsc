@@ -8,6 +8,7 @@ from arpreprocessing.helpers import filter_signal, get_empatica_sampling
 from arpreprocessing.preprocessorlabel import PreprocessorLabel
 from arpreprocessing.signal import Signal, NoSuchSignal
 from arpreprocessing.subjectlabel import SubjectLabel
+from arpreprocessing.DataAugmentation_TimeseriesData import DataAugmentation
 
 
 class KEmoWork(PreprocessorLabel):
@@ -88,7 +89,8 @@ class KEmoWorkSubject(SubjectLabel):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        signals = self.restructure_data(data, self._label_type)
+        # signals = self.restructure_data(data, self._label_type)
+        signals = self.restructure_data_with_augmentation(data, self._label_type)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals
@@ -103,6 +105,21 @@ class KEmoWorkSubject(SubjectLabel):
                 signal_name = '_'.join([sensor, str(i)])
                 print(signal_name)
                 signal = np.array([x[i] for x in data['signal'][sensor]])
+                new_data["signal"][signal_name] = signal
+        return new_data
+
+    @staticmethod
+    def restructure_data_with_augmentation(data, label_type):
+        # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
+        new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
+        for sensor in data['signal']:
+            print('sensor:', sensor)
+            for i in range(len(data['signal'][sensor][0])):
+                signal_name = '_'.join([sensor, str(i)])
+                print(signal_name)
+                signal = np.array([x[i] for x in data['signal'][sensor]])
+                data_augmentor = DataAugmentation(signal)
+                signal_augmented = data_augmentor.apply_all_augmentations()
                 new_data["signal"][signal_name] = signal
         return new_data
 
