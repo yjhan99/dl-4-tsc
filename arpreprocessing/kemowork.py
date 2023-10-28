@@ -110,8 +110,12 @@ class KEmoWorkSubject(SubjectLabel):
 
     @staticmethod
     def restructure_data_with_augmentation(data, label_type):
+        # print('before')
+        # print('label', len(data['label'][label_type].reshape(1,-1)[0]))
+        # print('signal', len(data['signal']['TEMP']))
         # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
-        new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
+        duplicated_labels = np.tile(data['label'][label_type].reshape(1,-1)[0], 7)
+        new_data = {'label': duplicated_labels, "signal": {}}
         for sensor in data['signal']:
             print('sensor:', sensor)
             for i in range(len(data['signal'][sensor][0])):
@@ -120,7 +124,10 @@ class KEmoWorkSubject(SubjectLabel):
                 signal = np.array([x[i] for x in data['signal'][sensor]])
                 data_augmentor = DataAugmentation(signal)
                 signal_augmented = data_augmentor.apply_all_augmentations()
-                new_data["signal"][signal_name] = signal
+                new_data["signal"][signal_name] = signal_augmented
+        # print('after')
+        # print('label', len(new_data['label']))
+        # print('signal', len(new_data['signal']['TEMP_0']))
         return new_data
 
     def _filter_all_signals(self, data):

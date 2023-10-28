@@ -7,6 +7,7 @@ results_cluster
 results_test
 results_tuning
 results_cluster_tuning
+results_augmented
 encodedresults
 encodedresults_old
 *.csv

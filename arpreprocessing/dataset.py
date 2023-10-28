@@ -10,7 +10,6 @@ class Dataset:
         self._logger = logger
 
     def save(self, path):
-        print('save')
         path = "{}/{}".format(path, self.name)
         os.makedirs(path, exist_ok=True)
 

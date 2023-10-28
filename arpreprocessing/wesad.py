@@ -9,11 +9,11 @@ from arpreprocessing.preprocessor import Preprocessor
 from arpreprocessing.signal import Signal, NoSuchSignal
 from arpreprocessing.subject import Subject
 from arpreprocessing.DataAugmentation_TimeseriesData import DataAugmentation
-
+    
 
 class Wesad(Preprocessor):
-    # SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
-    SUBJECTS_IDS = list(it.chain(range(2,7), range(8,12), range(13, 17)))
+    SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
+    # SUBJECTS_IDS = [7]
     SUBJECTS_IDS_STRESS_VER = (2, 3, 6, 9, 11, 14, 16)
     SUBJECTS_IDS_FUN_VER = (4, 5, 7, 8, 10, 13, 15, 17)
 
@@ -73,7 +73,7 @@ class WesadSubject(Subject):
         self._logger.info("Finished loading data for subject {}".format(self.id))
 
         return data
-
+    
     @staticmethod
     def load_subject_data_from_file(path, id):
         with open("{0}/S{1}/S{1}.pkl".format(path, id), 'rb') as f:
@@ -103,7 +103,8 @@ class WesadSubject(Subject):
     
     @staticmethod
     def restructure_data_with_augmentation(data):
-        new_data = {'label': np.array(data['label']), "signal": {}}
+        duplicated_labels = np.tile(data['label'], 7)
+        new_data = {'label': duplicated_labels, "signal": {}}
         for device in data['signal']:
             print('device:', device)
             for type in data['signal'][device]:
@@ -134,7 +135,8 @@ class WesadSubject(Subject):
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 
-            if label_id not in [1, 2, 3]:
+            # if label_id not in [1, 2, 3]: #with baseline condition (3 class classification)
+            if label_id not in [2, 3]: #without baseline condition (binary classification)
                 continue
 
             channel_id = 0
@@ -143,7 +145,11 @@ class WesadSubject(Subject):
                 self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
                 channel_id += 1
 
-            self.y.append(label_id)
+            if label_id == 2: # stress condition
+                self.y.append(1)
+                print('here')
+            elif label_id == 3: # non-stress condition
+                self.y.append(0)
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
 
