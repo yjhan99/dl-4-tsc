@@ -107,7 +107,6 @@ class MTMKL:
 	def getModalityNamesIndices(task_dict_list):
 		modality_dict = task_dict_list[0]['ModalityDict']
 		del modality_dict['pnu']
-		print(modality_dict)
 		sorted_tuples = sorted(modality_dict.items(), key=operator.itemgetter(1))
 		names = [n for (n,i) in sorted_tuples] 
 		indices = [i for (n,i) in sorted_tuples]

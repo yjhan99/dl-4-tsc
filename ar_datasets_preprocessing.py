@@ -3,6 +3,7 @@ import pathlib
 
 from arpreprocessing.wesad import Wesad
 from arpreprocessing.kemowork import KEmoWork
+from arpreprocessing.case import Case
 from utils.loggerwrapper import GLOBAL_LOGGER
 
 if __name__ == '__main__':
@@ -18,8 +19,11 @@ if __name__ == '__main__':
     # dataset = Amigos(GLOBAL_LOGGER, config['Paths']['amigos_dir']).get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
-    dataset.save(config['Paths']['mts_out_dir'])
+    # dataset = Wesad(GLOBAL_LOGGER, config['Paths']['wesad_dir']).get_dataset()
+    # dataset.save(config['Paths']['mts_out_dir'])
 
     # dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'], 'STRESS').get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
+
+    dataset = Case(GLOBAL_LOGGER, config['Paths']['case_dir'], 'AROUSAL').get_dataset()
+    dataset.save(config['Paths']['mts_out_dir'])

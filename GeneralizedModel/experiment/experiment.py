@@ -205,6 +205,8 @@ def get_ndft(sampling):
         return 128
     if sampling in [70, 64, 65]:
         return 256
+    if sampling in [100]:
+        return 512
     raise Exception(f"No such sampling as {sampling}")
 
 

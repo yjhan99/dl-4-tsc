@@ -40,9 +40,9 @@ USE_TENSORFLOW = False
 
 C_VALS = [1.0, 10.0, 100.0]   #10.0,100.0, #values for the C parameter of SVM to test
 B_VALS = [0.0001, 0.001, 0.01]
-V_VALS = [100.0, 10.0, 1.0, .1, .01]               #a small V works well for MKL
+V_VALS = [10.0, 1.0, .1,]               #a small V works well for MKL
 REGULARIZERS = ['L1','L2']       
-KERNELS = ['rbf','linear'] # could also do linear
+KERNELS = ['rbf'] # could also do linear
 
 VALIDATION_TYPE = 'cross'
 DEFAULT_NUM_CROSS_FOLDS = 5
@@ -127,7 +127,8 @@ class MTMKLWrapper:
 		#storing the results
 		self.time_sum = 0
 		if cont:
-			self.val_results_df = pd.DataFrame.from_csv(self.results_path + self.save_prefix + '.csv')
+			# self.val_results_df = pd.DataFrame.from_csv(self.results_path + self.save_prefix + '.csv')
+			self.val_results_df = pd.read_csv(self.results_path + self.save_prefix + '.csv')
 			print ('\nPrevious validation results df loaded. It has', len(self.val_results_df), "rows")
 			self.started_from = len(self.val_results_df)
 		else:
@@ -201,7 +202,6 @@ class MTMKLWrapper:
 
 	def initializeMTMKLModel(self, train_tasks, verbose=False):
 		if USE_TENSORFLOW:
-			# self.classifier = mtmkl_tf.MTMKL(train_tasks,verbose=verbose,tol=self.tolerance, debug=False, max_iter=self.max_iter)
 			self.classifier = mtmkl.MTMKL(train_tasks,verbose=verbose,tol=self.tolerance, debug=False, max_iter=self.max_iter)
 		else:
 			self.classifier = mtmkl.MTMKL(train_tasks,verbose=verbose,tol=self.tolerance, debug=False, max_iter=self.max_iter, drop20PercentTrainingData=self.drop20)
@@ -276,8 +276,6 @@ class MTMKLWrapper:
 			for t in range(self.n_tasks):
 				preds = self.classifier.predictOneTask(val_tasks,t)
 				true_y = list(val_tasks[t]['Y'].flatten())
-				# print('pred:', preds)
-				# print('true:', true_y)
 
 				if not self.users_as_tasks:
 					# save the per-task results
@@ -433,9 +431,14 @@ class MTMKLWrapper:
 			preds = self.classifier.predictOneTask(self.test_tasks,t)
 			true_y = list(self.test_tasks[t]['Y'].flatten())
 
-			if len(preds)==0 or len(true_y) == 0:
-				print ("no y for task", t, "... skipping")
+			if len(true_y) == 0: # not test subject's task
 				continue
+
+			num_test = len(true_y)
+
+			# if len(preds)==0 or len(true_y) == 0:
+			# 	print ("no y for task", t, "... skipping")
+			# 	continue
 				
 			all_preds.extend(preds)
 			all_true_y.extend(true_y)
@@ -448,13 +451,24 @@ class MTMKLWrapper:
 			per_task_precision[t] = t_precision
 			per_task_recall[t] = t_recall
 
-		print ("\nPlotting cool stuff about the final model...")
-		self.saveImagePlot(self.classifier.eta, 'Etas')
-		pd.DataFrame(self.classifier.eta).to_csv(self.etas_path + self.save_prefix + "-etas.csv")
+		# print ("\nPlotting cool stuff about the final model...")
+		# self.saveImagePlot(self.classifier.eta, 'Etas')
+		# pd.DataFrame(self.classifier.eta).to_csv(self.etas_path + self.save_prefix + "-etas.csv")
 
 		print ("\tHELD OUT TEST METRICS COMPUTED BY APPENDING ALL PREDS")
 		acc, auc, f1, precision, recall = helper.computeAllMetricsForPreds(all_preds, all_true_y)
 		print ('\t\tAcc:', acc, 'AUC:', auc, 'F1:', f1, 'Precision:', precision, 'Recall:', recall)
+
+		save_dict = {"Acc": acc, "AUC": auc, "F1": f1, "Precision": precision, "Recall": recall, "TestNum": num_test}
+		csv_file_path = DEFAULT_RESULTS_PATH + 'TestResult.csv'
+		file_exist = os.path.isfile(csv_file_path)
+
+		if file_exist:
+			df = pd.read_csv(csv_file_path)
+			df = pd.concat([df, pd.DataFrame([save_dict])], ignore_index=True)
+		else:
+			df = pd.DataFrame([save_dict])
+		df.to_csv(csv_file_path, index=False)
 
 		print ("\n\tHELD OUT TEST METRICS COMPUTED BY AVERAGING OVER TASKS")
 		avg_acc = np.nanmean(per_task_accs)

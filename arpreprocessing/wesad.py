@@ -38,11 +38,11 @@ def target_sampling(channel_name: str):
     if channel_name.startswith("chest_EMG"):
         return 10
     if channel_name.startswith("chest_EDA"):
-        return 3.5
+        return 7
     if channel_name.startswith("chest_Temp"):
-        return 3.5
+        return 7
     if channel_name.startswith("chest_Resp"):
-        return 3.5
+        return 7
     if channel_name.startswith("wrist_ACC"):
         return 8
     if channel_name.startswith("wrist"):
@@ -82,8 +82,8 @@ class WesadSubject(Subject):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        # signals = self.restructure_data(data)
-        signals = self.restructure_data_with_augmentation(data)
+        signals = self.restructure_data(data)
+        # signals = self.restructure_data_with_augmentation(data)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals
@@ -147,7 +147,6 @@ class WesadSubject(Subject):
 
             if label_id == 2: # stress condition
                 self.y.append(1)
-                print('here')
             elif label_id == 3: # non-stress condition
                 self.y.append(0)
 
