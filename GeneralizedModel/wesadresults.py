@@ -75,7 +75,7 @@ def get_result(architecture, dataset, eval_i, setups):
             loss.append(df_best_model["best_model_val_loss"][0])
             accuracy.append(df_metrics["accuracy"][0])
             f1.append(df_metrics["f1"][0])
-            auc.append(df_metrics["auc"][0])
+            auc.append(1-df_metrics["auc"][0])
             duration.append(df_metrics["duration"][0])
 
         duration = np.array(duration) / 60
@@ -87,7 +87,7 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results/FINAL/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
@@ -120,7 +120,7 @@ def count_test_classes_representation():
 
     for dataset in ["WESAD"]:
         y_num = []
-        result_path = "./results"
+        result_path = "./results/FINAL"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 

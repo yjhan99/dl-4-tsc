@@ -82,8 +82,8 @@ class WesadSubject(Subject):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        signals = self.restructure_data(data)
-        # signals = self.restructure_data_with_augmentation(data)
+        # signals = self.restructure_data(data)
+        signals = self.restructure_data_with_augmentation(data)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals

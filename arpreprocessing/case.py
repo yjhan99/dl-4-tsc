@@ -32,9 +32,9 @@ def original_sampling(channel_name: str):
 
 def target_sampling(channel_name: str):
     if channel_name == "label":
-        return 20
+        return 10
     else:
-        return 100
+        return 50
     raise NoSuchSignal(channel_name)
 
 
@@ -118,7 +118,7 @@ class CaseSubject(SubjectLabel):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["ECG_0"]) - 1000, 500): #10sec*100Hz window and 5sec*100Hz sliding
+        for i in range(0, len(data["signal"]["ECG_0"]) - 500, 250): #10sec*50Hz window and 5sec*50Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
             personalized_threshold = np.mean(data["label"])
 
@@ -143,6 +143,6 @@ class CaseSubject(SubjectLabel):
     @staticmethod
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
-        first_index = int((i * freq) // 100)
+        first_index = int((i * freq) // 50)
         window_size = int(10 * freq) # For 10sec window
         return first_index, first_index + window_size

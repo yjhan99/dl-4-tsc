@@ -18,9 +18,10 @@ import pandas as pd
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 
-SIGNALS_LEN = 14
+
+SIGNALS_LEN = 9
 
 
 def get_ndft(sampling):
@@ -36,8 +37,12 @@ def get_ndft(sampling):
         return 128
     if sampling in [70, 64, 65]:
         return 256
+    if sampling in [100]:
+        return 512
     raise Exception(f"No such sampling as {sampling}")
 
+def reshape_samples(samples):
+    return [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in samples]
 
 class GaussianNoiseLayer(tf.keras.layers.Layer):
     def __init__(self, stddev, **kwargs):
@@ -82,39 +87,70 @@ class Autoencoder(keras.Model):
 
 
 def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
     result = []
 
     random.seed(seed)
 
-    subject_ids = list(subject_ids)
-    subject_ids_female = list()
-    subject_ids_male = list()
+    for test_subject in test_sets:
+        print(test_subject[0])
+        rest = [x for x in subject_ids if (x not in test_subject)]
 
-    path = "archives/{}".format(dataset_name)
+        file_path = "./archives/{0}/participants.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
 
-    for subject_id in subject_ids:
-        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
-            for line in f:
-                words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':
-                    if words[1] == 'male':
-                        subject_ids_male.append(subject_id)
-                    else:
-                        subject_ids_female.append(subject_id)
+        X = file.iloc[:, :-1]
+        X.columns = ['pnum', 'gender', 'age']
 
-    test_sets = [subject_ids[i::n] for i in range(n)]
+        label_encoder = LabelEncoder()
+        X['gender'] = label_encoder.fit_transform(X['gender'])
+        X['age'] = label_encoder.fit_transform(X['age'])
 
-    for test_set in test_sets:
-        if test_set[0] in subject_ids_male:
-            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            val_set = random.sample(rest, math.ceil(len(rest) / 5))
-            train_set = [x for x in rest if (x not in val_set) & (x in subject_ids_male)]
-        else:
-            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
-            val_set = random.sample(rest, math.ceil(len(rest) / 5))
-            train_set = [x for x in rest if (x not in val_set) & (x in subject_ids_female)]    
-        result.append({"train": train_set, "val": val_set, "test": test_set})
+        X_test = X.loc[X['pnum']==test_subject[0]]
+        X_rest = X.loc[X['pnum']!=test_subject[0]]
 
+        scaler = MinMaxScaler()
+        scaler.fit(X_rest.iloc[:,1:])
+        X_test_scaled = pd.DataFrame(scaler.transform(X_test.iloc[:,1:]))
+        X_rest_scaled = pd.DataFrame(scaler.transform(X_rest.iloc[:,1:]))
+
+        # n_components = 3
+        # pca = PCA(n_components=n_components)
+        # pca.fit(X_rest_scaled)
+        # X_test_scaled = pd.DataFrame(pca.transform(X_test_scaled))
+        # X_rest_scaled = pd.DataFrame(pca.transform(X_rest_scaled))
+
+        silhouette_scores = []
+        possible_K_values = [i for i in range(2,6)]
+
+        for each_value in possible_K_values:
+            clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+            cluster_labels = clusterer.fit_predict(X_rest_scaled)
+            silhouette_scores.append(silhouette_score(X_rest_scaled, cluster_labels))
+
+        k_value = silhouette_scores.index(min(silhouette_scores))
+        clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+        cluster_labels = clusterer.fit_predict(X_rest_scaled)
+        X_rest_scaled['cluster'] = list(cluster_labels)
+        X_rest_scaled['pnum'] = X_rest['pnum'].values.tolist()
+
+        cluster_list = [[] for _ in range(possible_K_values[k_value])]
+
+        for subject_id in rest:
+            X_subject = X_rest_scaled.loc[X_rest_scaled['pnum']==subject_id,'cluster'].values[0]
+            cluster_list[X_subject].append(subject_id)
+
+        test_cluster = clusterer.predict(X_test_scaled)
+
+        for idx, cluster in enumerate(list(cluster_list)):
+            if idx == test_cluster:
+                rest = [x for x in rest if x in cluster]
+                val_set = random.sample(rest, math.ceil(len(rest) / 5))
+                train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
+
+        result.append({"train": train_set, "val": val_set, "test": test_subject})
+            
     print(result)
 
     random.seed()
@@ -133,17 +169,17 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
         rest = [x for x in subject_ids if (x not in test_subject)]
 
         path = "./archives/mts_archive"
-        dataset = Dataset("WESAD", None, GLOBAL_LOGGER)
+        dataset = Dataset("Case", None, GLOBAL_LOGGER)
         channels_ids = tuple(range(SIGNALS_LEN))
 
         X, s, y, sampling_rate = dataset.load_with_subjectid(path, rest, channels_ids)
         test_X, test_s, test_y, sampling_rate = dataset.load_with_subjectid(path, test_subject, channels_ids)
 
         try: 
-            file_path = "./encodedresults/WESAD/encoded_results_restof_{1}.csv".format("WESAD",test_subject)
+            file_path = "./encodedresults/Case/encoded_results_restof_{1}.csv".format("Case",test_subject)
             file = pd.read_csv(file_path, usecols=lambda column: column != 'Unnamed: 0')
             X_encoded_df = pd.DataFrame(file)
-            file_path = "./encodedresults/WESAD/encoded_results_{1}.csv".format("WESAD",test_subject)
+            file_path = "./encodedresults/Case/encoded_results_{1}.csv".format("Case",test_subject)
             file = pd.read_csv(file_path, usecols=lambda column: column != 'Unnamed: 0')
             test_X_encoded_df = pd.DataFrame(file)
 
@@ -224,8 +260,8 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
             X_encoded_df['pnum'] = s_list
             test_X_encoded_df['pnum'] = test_subject[0]
             
-            X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',')
-            test_X_encoded_df.to_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',')
+            X_encoded_df.to_csv(f'./encodedresults/Case/encoded_results_restof_{test_subject}.csv', sep=',')
+            test_X_encoded_df.to_csv(f'./encodedresults/Case/encoded_results_{test_subject}.csv', sep=',')
 
         scaler = MinMaxScaler()
         scaler.fit(X_encoded_df.iloc[:,:-1])
@@ -244,7 +280,7 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
         clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
         cluster_labels = clusterer.fit_predict(X_encoded_scaled)
         X_encoded_df['cluster'] = list(cluster_labels)
-        X_encoded_df.to_csv(f'./archives/WESAD/feature_clustering_results_{test_subject}.csv', sep=',')
+        X_encoded_df.to_csv(f'./archives/Case/feature_clustering_results_{test_subject}.csv', sep=',')
         
         test_cluster_labels = clusterer.predict(test_X_encoded_scaled)
         test_X_encoded_df['cluster'] = list(test_cluster_labels)
@@ -290,42 +326,4 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
 
     print(result)
         
-    return result
-
-
-def n_fold_split_mtl_cluster_trait(subject_ids, n, dataset_name, seed=5):
-    result = []
-
-    random.seed(seed)
-
-    subject_ids = list(subject_ids)
-    subject_ids_female = list()
-    subject_ids_male = list()
-
-    path = "archives/{}".format(dataset_name)
-
-    for subject_id in subject_ids:
-        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
-            for line in f:
-                words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':
-                    if words[1] == 'male':
-                        subject_ids_male.append(subject_id)
-                    else:
-                        subject_ids_female.append(subject_id)
-
-    test_sets = [subject_ids[i::n] for i in range(n)]
-
-    for test_set in test_sets:
-        if test_set[0] in subject_ids_male:
-            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
-        else:
-            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
-        result.append({"task_rest": task_rest, "task_test": task_test, "test": test_set})
-
-    print(result)
-
-    random.seed()
     return result
