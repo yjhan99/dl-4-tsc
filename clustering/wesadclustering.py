@@ -293,7 +293,7 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
     return result
 
 
-def n_fold_split_mtl_cluster_trait(subject_ids, n, dataset_name, seed=5):
+def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
     result = []
 
     random.seed(seed)
@@ -318,12 +318,10 @@ def n_fold_split_mtl_cluster_trait(subject_ids, n, dataset_name, seed=5):
 
     for test_set in test_sets:
         if test_set[0] in subject_ids_male:
-            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
+            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
         else:
-            task_rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_male)]
-            task_test = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
-        result.append({"task_rest": task_rest, "task_test": task_test, "test": test_set})
+            rest = [x for x in subject_ids if (x not in test_set) & (x in subject_ids_female)]
+        result.append({"test": test_set, "cluster": rest})
 
     print(result)
 

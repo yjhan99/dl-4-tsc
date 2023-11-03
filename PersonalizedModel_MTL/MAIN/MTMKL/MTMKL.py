@@ -347,7 +347,7 @@ class MTMKL:
 			output:		predictions for the y values for each task. So a list of lists, where each inner list
 						is the y_hat values for a particular task'''
 		Y_hat = [0] * len(task_dict_list)
-		for t in range(len(task_dict_list)): 
+		for t in range(len(task_dict_list)):
 			Y_hat[t] = self.predictOneTask(task_dict_list,t)
 		return Y_hat
 
