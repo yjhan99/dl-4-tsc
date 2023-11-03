@@ -1,7 +1,6 @@
 from arpreprocessing.wesad import Wesad
 from clustering.wesadclustering import n_fold_split_cluster_trait_mtl
 from experiment.experiment import Experiment, prepare_experimental_setups_n_iterations, n_fold_split
-import random
 
 SIGNALS_LEN = 14
 

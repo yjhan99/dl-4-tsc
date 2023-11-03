@@ -321,3 +321,68 @@ def n_fold_split_cluster_feature(subject_ids, n, seed=5):
     print(result)
         
     return result
+
+
+def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
+    result = []
+
+    random.seed(seed)
+
+    for test_subject in test_sets:
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        file_path = "./archives/{0}/{0}_PreSurvey.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
+
+        # Including only age and BFI-15 information
+        X = file.iloc[:, [1, 3] + list(range(80, 95))]
+        X.columns = ['pnum', 'age'] + [f'bfi_{i}' for i in range(1, 16)]
+
+        X_test = X.loc[X['pnum']==test_subject[0]]
+        X_rest = X.loc[X['pnum']!=test_subject[0]]
+
+        scaler = MinMaxScaler()
+        scaler.fit(X_rest.iloc[:,1:])
+        X_test_scaled = scaler.transform(X_test.iloc[:,1:])
+        X_rest_scaled = scaler.transform(X_rest.iloc[:,1:])
+
+        n_components = 3
+        pca = PCA(n_components=n_components)
+        pca.fit(X_rest_scaled)
+        X_test_pca = pd.DataFrame(pca.transform(X_test_scaled))
+        X_rest_pca = pd.DataFrame(pca.transform(X_rest_scaled))
+
+        silhouette_scores = []
+        possible_K_values = [i for i in range(2,6)]
+
+        for each_value in possible_K_values:
+            clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+            cluster_labels = clusterer.fit_predict(X_rest_pca)
+            silhouette_scores.append(silhouette_score(X_rest_pca, cluster_labels))
+
+        k_value = silhouette_scores.index(min(silhouette_scores))
+        clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+        cluster_labels = clusterer.fit_predict(X_rest_pca)
+        X_rest_pca['cluster'] = list(cluster_labels)
+        X_rest_pca['pnum'] = X_rest['pnum'].values.tolist()
+
+        cluster_list = [[] for _ in range(possible_K_values[k_value])]
+
+        for subject_id in rest:
+            X_subject = X_rest_pca.loc[X_rest_pca['pnum']==subject_id,'cluster'].values[0]
+            cluster_list[X_subject].append(subject_id)
+
+        test_cluster = clusterer.predict(X_test_pca)
+
+        for idx, cluster in enumerate(list(cluster_list)):
+            if idx == test_cluster:
+                rest = [x for x in rest if x in cluster]
+
+        result.append({"cluster": rest, "test": test_subject})
+            
+    print(result)
+
+    random.seed()
+    return result
