@@ -49,11 +49,13 @@ class ClassifierMlpLstm(Classifier):
 
         return model
 
-    def fit_finetuning(self, x_train, y_train, x_val, y_val, y_true, y_test_tuning, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True):
+    def fit_mtl(self, x_train, y_train, x_val, y_val, y_true, x_cluster, y_cluster, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True):
         x_train = reshape_samples(x_train)
         x_val = reshape_samples(x_val)
         if x_test is not None:
             x_test = reshape_samples(x_test)
+        if x_cluster is not None:
+            x_cluster = reshape_samples(x_cluster)
 
-        return super().fit_finetuning(x_train, y_train, x_val, y_val, y_true, y_test_tuning, batch_size=batch_size, nb_epochs=nb_epochs,
+        return super().fit_mtl(x_train, y_train, x_val, y_val, y_true, x_cluster, y_cluster, batch_size=batch_size, nb_epochs=nb_epochs,
                            x_test=x_test, shuffle=shuffle)

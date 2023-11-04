@@ -207,7 +207,12 @@ class Experiment(ABC):
         self.logger_obj.info(logging_message)
 
         with FileLock(output_directory + "DOING.lock", timeout=0):
-            done_dict_path = output_directory + "DONE"
+            # done_dict_path = output_directory + "DONE"
+            # if os.path.exists(done_dict_path):
+            #     self.logger_obj.info("Experiment already performed")
+            #     return
+            
+            done_dict_path = output_mtl_directory + "DONE"
             if os.path.exists(done_dict_path):
                 self.logger_obj.info("Experiment already performed")
                 return
