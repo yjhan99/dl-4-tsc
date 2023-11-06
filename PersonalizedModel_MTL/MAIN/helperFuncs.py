@@ -624,7 +624,7 @@ def get_test_predictions_for_df_with_task_column(model_predict_func, csv_path, t
 
 	data_df = normalizeAndFillDataDf(data_df, wanted_feats, wanted_labels)
 
-	if label_name is "" and wanted_label is not None:
+	if label_name == "" and wanted_label != None:
 		label_name = getFriendlyLabelName(wanted_label)
 
 	for i,task_dict in enumerate(tasks):

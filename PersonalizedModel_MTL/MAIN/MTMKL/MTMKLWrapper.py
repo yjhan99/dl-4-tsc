@@ -273,7 +273,8 @@ class MTMKLWrapper:
 			# Get results!
 			fold_preds = []
 			fold_true_y = []
-			for t in range(self.n_tasks):
+			# for t in range(self.n_tasks):
+			for t in range(len(val_tasks)):
 				preds = self.classifier.predictOneTask(val_tasks,t)
 				true_y = list(val_tasks[t]['Y'].flatten())
 
@@ -311,7 +312,8 @@ class MTMKLWrapper:
 
 		# Add per-task results to the dictionary
 		if not self.users_as_tasks:
-			for t in range(self.n_tasks):
+			# for t in range(self.n_tasks):
+			for t in range(len(val_tasks)):
 				task_name = val_tasks[t]['Name']
 				results_dict['TaskAcc-' + helper.getFriendlyLabelName(task_name)] = np.nanmean(per_task_accs[t])
 				results_dict['TaskAuc-' + helper.getFriendlyLabelName(task_name)] = np.nanmean(per_task_aucs[t])
