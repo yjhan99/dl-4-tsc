@@ -5,6 +5,7 @@ from arpreprocessing.wesad import Wesad
 from arpreprocessing.kemowork import KEmoWork
 from arpreprocessing.case import Case
 from arpreprocessing.kemocon import KEmoCon
+from arpreprocessing.dreamer import Dreamer
 from utils.loggerwrapper import GLOBAL_LOGGER
 
 if __name__ == '__main__':
@@ -29,5 +30,8 @@ if __name__ == '__main__':
     # dataset = Case(GLOBAL_LOGGER, config['Paths']['case_dir'], 'AROUSAL').get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    dataset = KEmoCon(GLOBAL_LOGGER, config['Paths']['kemocon_dir'], 'arousal').get_dataset()
+    # dataset = KEmoCon(GLOBAL_LOGGER, config['Paths']['kemocon_dir'], 'arousal').get_dataset()
+    # dataset.save(config['Paths']['mts_out_dir'])
+
+    dataset = Dreamer(GLOBAL_LOGGER, config['Paths']['dreamer_dir']).get_dataset()
     dataset.save(config['Paths']['mts_out_dir'])

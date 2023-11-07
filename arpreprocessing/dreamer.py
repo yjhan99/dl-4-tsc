@@ -11,93 +11,89 @@ from arpreprocessing.subject import Subject
 from arpreprocessing.DataAugmentation_TimeseriesData import DataAugmentation
     
 
-class Wesad(Preprocessor):
-    SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
-    SUBJECTS_IDS_STRESS_VER = (2, 3, 6, 9, 11, 14, 16)
-    SUBJECTS_IDS_FUN_VER = (4, 5, 7, 8, 10, 13, 15, 17)
+class Dreamer(Preprocessor):
+    SUBJECTS_IDS = tuple(range(0, 23))
+    CHANNELS_NAMES = [f"eeg_channel_{i+1}" for i in range(14)] + [f"ecg_channel_{i+1}" for i in range(2)]
 
     def __init__(self, logger, path):
-        Preprocessor.__init__(self, logger, path, "WESAD", [], None, subject_cls=WesadSubject)
+        Preprocessor.__init__(self, logger, path, "Dreamer", [], None, subject_cls=DreamerSubject)
 
     def get_subjects_ids(self):
         return self.SUBJECTS_IDS
 
 
 def original_sampling(channel_name: str):
-    if channel_name.startswith("chest"):
-        return 700
-    return get_empatica_sampling(channel_name[len("wrist_"):])
+    if channel_name.startswith("eeg"):
+        return 128
+    if channel_name.startswith("ecg"):
+        return 256
+    return NoSuchSignal(channel_name)
 
 
 def target_sampling(channel_name: str):
-    if channel_name.startswith("chest_ECG"):
-        return 70
-    if channel_name.startswith("chest_ACC"):
-        return 10
-    if channel_name.startswith("chest_EMG"):
-        return 10
-    if channel_name.startswith("chest_EDA"):
-        return 7
-    if channel_name.startswith("chest_Temp"):
-        return 7
-    if channel_name.startswith("chest_Resp"):
-        return 7
-    if channel_name.startswith("wrist_ACC"):
-        return 8
-    if channel_name.startswith("wrist"):
-        return original_sampling(channel_name)
+    if channel_name.startswith("eeg"):
+        return 32
+    if channel_name.startswith("ecg"):
+        return 64
     if channel_name == "label":
-        return 700
+        return 10
     raise NoSuchSignal(channel_name)
 
 
-class WesadSubject(Subject):
+class DreamerSubject(Subject):
     def __init__(self, logger, path, subject_id, channels_names, get_sampling_fn):
         Subject.__init__(self, logger, path, subject_id, channels_names, get_sampling_fn)
         self._logger = logger
         self._path = path
         self.id = subject_id
 
-        data = self._load_subject_data_from_file()
-        self._data = self._restructure_data(data)
-        self._process_data()
+        for video_num in range(0,18):
+            data = self._load_subject_data_from_file(video_num)
+            self._data = self._restructure_data(data)
+            self._process_data()
 
     def _process_data(self):
         data = self._filter_all_signals(self._data)
         self._create_sliding_windows(data)
 
-    def _load_subject_data_from_file(self):
+    def _load_subject_data_from_file(self, video_num):
         self._logger.info("Loading data for subject {}".format(self.id))
-        data = self.load_subject_data_from_file(self._path, self.id)
+        data = self.load_subject_data_from_file(self._path, self.id, video_num)
         self._logger.info("Finished loading data for subject {}".format(self.id))
 
         return data
     
     @staticmethod
-    def load_subject_data_from_file(path, id):
-        with open("{0}/S{1}/S{1}.pkl".format(path, id), 'rb') as f:
+    def load_subject_data_from_file(path, id, video_num):
+        with open("{0}/S{1}/S{1}_V{2}.pkl".format(path, id, video_num), 'rb') as f:
             data = pickle.load(f, encoding='latin1')
         return data
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        # signals = self.restructure_data(data)
-        signals = self.restructure_data_with_augmentation(data)
+        signals = self.restructure_data(data)
+        # signals = self.restructure_data_with_augmentation(data)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals
     
     @staticmethod
     def restructure_data(data):
-        new_data = {'label': np.array(data['label']), "signal": {}}
-        for device in data['signal']:
-            print('device:', device)
-            for type in data['signal'][device]:
-                print('type:', type)
-                for i in range(len(data['signal'][device][type][0])):
-                    signal_name = '_'.join([device, type, str(i)])
-                    signal = np.array([x[i] for x in data['signal'][device][type]])
-                    new_data["signal"][signal_name] = signal
+        new_data = {'label': np.array(data['label']["arousal"]), "signal": {}}
+        for type in data['signal']:
+            print('type:', type)
+            data['signal'][type] = data['signal'][type].reshape(-1,1)
+            for i in range(len(data["signal"][type][0])):
+                signal = np.array([x[i] for x in data['signal'][type]])
+                new_data["signal"][type] = signal
+        # for device in data['signal']:
+        #     print('device:', device)
+        #     for type in data['signal'][device]:
+        #         print('type:', type)
+        #         for i in range(len(data['signal'][device][type][0])):
+        #             signal_name = '_'.join([device, type, str(i)])
+        #             signal = np.array([x[i] for x in data['signal'][device][type]])
+        #             new_data["signal"][signal_name] = signal
         return new_data
     
     @staticmethod
@@ -129,14 +125,11 @@ class WesadSubject(Subject):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
-        for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 40, 20): # 10sec*4Hz window and 5sec*4Hz sliding
+        for i in range(0, len(data["signal"]["eeg_channel_1"]) - 10*32, 5*32): # 10sec*4Hz window and 5sec*4Hz sliding
         # for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
-            label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
-
-            # if label_id not in [1, 2, 3]: #with baseline condition (3 class classification)
-            if label_id not in [2, 3]: #without baseline condition (binary classification)
-                continue
+            # label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
+            label_id = data["label"]
 
             channel_id = 0
             for signal in data["signal"]:
@@ -144,10 +137,7 @@ class WesadSubject(Subject):
                 self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
                 channel_id += 1
 
-            if label_id == 2: # stress condition
-                self.y.append(1)
-            elif label_id == 3: # non-stress condition
-                self.y.append(0)
+            self.y.append(label_id)
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
 
