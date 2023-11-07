@@ -32,7 +32,8 @@ def original_sampling(channel_name: str):
 
 def target_sampling(channel_name: str):
     if channel_name == "label":
-        return 10
+        return 20
+        # return 10
     else:
         return 50
     raise NoSuchSignal(channel_name)
@@ -69,8 +70,8 @@ class CaseSubject(SubjectLabel):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        # signals = self.restructure_data(data, self._label_type)
-        signals = self.restructure_data_with_augmentation(data, self._label_type)
+        signals = self.restructure_data(data, self._label_type)
+        # signals = self.restructure_data_with_augmentation(data, self._label_type)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals

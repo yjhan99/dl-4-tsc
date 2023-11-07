@@ -13,12 +13,13 @@ KEmoWork_SUBJECTS = [1,2,3,4,8,10,12,13,14,16,18,19,20,21,22,23,25,26,27]
 def datasets_metrics():
     results = []
 
-    for dataset in ["KEmoWork_19_fold"]:
+    # for dataset in ["KEmoWork_19_fold"]:
+    for dataset in ["KEmoWork2_19_fold"]:
         # setups = [f"it_{it:02d}" for it in range(5)]
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'cnnM', 'mlpLstmM', 'resnetM']:
+        for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
             # for eval_i in range(10):
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
@@ -95,7 +96,8 @@ def count_classes_representation():
     counts = {}
     results = []
 
-    for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork"]:
+    for dataset in ["KEmoWork2"]:
         counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
@@ -119,7 +121,8 @@ def count_classes_representation():
 def count_test_classes_representation():
     results = []
 
-    for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork"]:
+    for dataset in ["KEmoWork2"]:
         y_num = []
         # result_path = "./results"
         result_path = "./results_cluster_tuning"
@@ -127,8 +130,9 @@ def count_test_classes_representation():
         folder_names.sort()
 
         for folder_name in folder_names:
-            if folder_name.startswith("KEmoWork_19fold_"):
-                path = os.path.join(result_path, folder_name, "tune_00/cnnM/it_00/predictions.txt")
+            # if folder_name.startswith("KEmoWork_19fold_"):
+            if folder_name.startswith("KEmoWork2_19fold_"):
+                path = os.path.join(result_path, folder_name, "tune_00/fcnM/it_00/predictions.txt")
                 if not os.path.exists(path):
                     continue
                 with open(path, 'r') as f:

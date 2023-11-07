@@ -35,8 +35,8 @@ def target_sampling(channel_name: str):
         return 32
     if channel_name.startswith("ecg"):
         return 64
-    if channel_name == "label":
-        return 10
+    # if channel_name == "label":
+    #     return 10
     raise NoSuchSignal(channel_name)
 
 
@@ -123,11 +123,15 @@ class DreamerSubject(Subject):
     def _create_sliding_windows(self, data):
         self._logger.info("Creating sliding windows for subject {}".format(self.id))
 
-        self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
+        # self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
+        if len(self.x) == 0:
+            self.x = [Signal(signal_name, target_sampling(signal_name), []) for idx,signal_name in enumerate(data["signal"])]
+        else:
+            self.x = [Signal(signal_name, target_sampling(signal_name), self.x[idx].data) for idx,signal_name in enumerate(data["signal"])]
 
         for i in range(0, len(data["signal"]["eeg_channel_1"]) - 10*32, 5*32): # 10sec*4Hz window and 5sec*4Hz sliding
         # for i in range(0, len(data["signal"]["wrist_EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
-            first_index, last_index = self._indexes_for_signal(i, "label")
+            # first_index, last_index = self._indexes_for_signal(i, "label")
             # label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
             label_id = data["label"]
 
@@ -144,7 +148,7 @@ class DreamerSubject(Subject):
     @staticmethod
     def _indexes_for_signal(i, signal):
         freq = target_sampling(signal)
-        first_index = int((i * freq) // 4) # Due to EDA's sampling rate 4Hz
+        first_index = int((i * freq) // 32) # Due to eeg's sampling rate 4Hz
         window_size = int(10 * freq)
         # window_size = int(60 * freq)
         return first_index, first_index + window_size

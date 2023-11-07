@@ -13,8 +13,8 @@ from arpreprocessing.DataAugmentation_TimeseriesData import DataAugmentation
 
 class KEmoCon(PreprocessorLabel):
     SUBJECTS_IDS = [1, 4, 5, 8, 9, 10, 11, 13, 14, 15, 16, 19, 22, 23, 24, 25, 26, 27, 28, 31, 32]
-    # CHANNELS_NAMES = ['e4_eda', 'e4_acc', 'e4_temp', 'e4_bvp', 'eeg']
-    CHANNELS_NAMES = ['e4_eda', 'e4_acc', 'e4_temp', 'e4_bvp']
+    CHANNELS_NAMES = ['e4_eda', 'e4_acc', 'e4_temp', 'e4_bvp', 'eeg']
+    # CHANNELS_NAMES = ['e4_eda', 'e4_acc', 'e4_temp', 'e4_bvp']
 
     def __init__(self, logger, path, label_type):
         PreprocessorLabel.__init__(self, logger, path, label_type, "KEmoCon", [], None, subject_cls=KEmoConSubject)
@@ -32,8 +32,8 @@ def original_sampling(channel_name: str):
         return 4
     if channel_name.startswith("e4_bvp"):
         return 64
-    # if channel_name.startswith("eeg"):
-    #     return 125
+    if channel_name.startswith("eeg"):
+        return 1
     if channel_name == "label":
         return 0.2
     raise NoSuchSignal(channel_name)
@@ -48,10 +48,10 @@ def target_sampling(channel_name: str):
         return 4
     if channel_name.startswith("e4_bvp"):
         return 64
-    # if channel_name.startswith("eeg"):
-    #     return 64
+    if channel_name.startswith("eeg"):
+        return 1
     if channel_name == "label":
-        return 2
+        return 0.2
     raise NoSuchSignal(channel_name)
 
 
@@ -99,7 +99,6 @@ class KEmoConSubject(SubjectLabel):
         for sensor in data['signal']:
             print('sensor:', sensor)
             # data['signal'][sensor] = data['signal'][sensor].reshape(-1,1)
-            print(data['signal'][sensor].shape)
             # for i in range(len(data['signal'][sensor][0])):
             for i in range(len(data['signal'][sensor][0])):
                 signal_name = '_'.join([sensor, str(i)])
@@ -136,6 +135,9 @@ class KEmoConSubject(SubjectLabel):
 
         self.x = [Signal(signal_name, target_sampling(signal_name), []) for signal_name in data["signal"]]
 
+        personalized_threshold = np.mean(data["label"])
+        print('threshold', personalized_threshold)
+
         for i in range(0, len(data["signal"]["e4_eda_0"]) - 40, 20): #10sec*4Hz window and 5sec*4Hz sliding
         # for i in range(0, len(data["signal"]["EDA_0"]) - 240, 120): # 60sec*4Hz window and 30sec*4Hz sliding
             first_index, last_index = self._indexes_for_signal(i, "label")
@@ -146,18 +148,18 @@ class KEmoConSubject(SubjectLabel):
             else:
                 label_window_mean = np.mean(data["label"][first_index:last_index])
 
+            print('window:', data["label"][first_index:last_index])
+
             channel_id = 0
             for signal in data["signal"]:
                 first_index, last_index = self._indexes_for_signal(i, signal)
                 self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
 
-                # if len(data["signal"][signal][first_index:last_index]) == 10*target_sampling(signal):
-                #     self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
-                # else: # Because of subject 8 and 22
-                #     self.x[channel_id].data.append(self.x[channel_id].data[-1])
                 channel_id += 1
             
             self.y.append(np.float64(1.0)) if label_window_mean > personalized_threshold else self.y.append(np.float64(0.0))
+
+        print(self.y)
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
 
