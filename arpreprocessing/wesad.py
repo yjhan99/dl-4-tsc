@@ -114,7 +114,7 @@ class WesadSubject(Subject):
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 
-            if label_id not in [1, 2, 3]:
+            if label_id not in [2, 3]:  # without baseline condition (binary classification)
                 continue
 
             channel_id = 0
@@ -123,7 +123,12 @@ class WesadSubject(Subject):
                 self.x[channel_id].data.append(data["signal"][signal][first_index:last_index])
                 channel_id += 1
 
-            self.y.append(label_id)
+            if label_id == 2:  # stress condition
+                self.y.append(1)
+            elif label_id == 3: # non-stress condition
+                self.y.append(0)
+                
+            #self.y.append(label_id)
 
         self._logger.info("Finished creating sliding windows for subject {}".format(self.id))
 

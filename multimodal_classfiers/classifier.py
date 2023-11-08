@@ -64,6 +64,7 @@ class Classifier(ABC):
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
+        print("classifier.py:::fit:::save_logs")
         return save_logs(self.output_directory, hist, y_pred, y_pred_probabilities, y_true, duration)
 
 

@@ -62,6 +62,22 @@ def prepare_data(x_train, y_train, y_val, y_test):
         input_shapes = x_train.shape[1:]
     return input_shapes, nb_classes, y_val, y_train, y_test, y_true
 
+def prepare_data_maml(x_train, y_train, y_val, y_test):
+    y_true = {user_id: [] for user_id in y_val.keys()}
+    for user_id in y_val.keys():
+        y_true[user_id] = y_val[user_id]
+    y_all = []
+    y_all.extend([value for values in y_train.values() for value in values])
+    y_all.extend([value for values in y_test.values() for value in values])
+    y_all.extend([value for values in y_val.values() for value in values])
+    y_all = np.array(y_all)
+    nb_classes = len(np.unique(y_all))
+    for user_id, values in x_train.items():
+        if type(values) == list:
+            input_shapes = [x.shape[1:] for x in x_train[user_id]]
+            break
+    return input_shapes, nb_classes, y_val, y_train, y_test, y_true
+    
 
 def prepare_data_mtl(x_test, y_task_rest, y_task_test, y_test):
     y_task_rest, y_task_test, y_test = transform_labels_mtl(y_task_rest, y_test, y_task_test)
@@ -80,7 +96,6 @@ def prepare_data_mtl(x_test, y_task_rest, y_task_test, y_test):
     else:
         input_shapes = x_test.shape[1:]
     return input_shapes, nb_classes, y_task_rest, y_task_test, y_test, y_true
-
 
 def set_available_gpus(gpu_ids):
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
