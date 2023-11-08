@@ -25,8 +25,8 @@ class MAML(Classifier):
         channel_outputs = []
 
         filters_multipliers, kernel_size_multipliers = get_multipliers(len(input_shapes), hyperparameters)
-        print(f"{filters_multipliers=}")
-        print(f"{kernel_size_multipliers=}")
+        # print(f"{filters_multipliers=}")
+        # print(f"{kernel_size_multipliers=}")
         
         for channel_id, input_shape in enumerate(input_shapes):
             input_layer = layers.Input(shape=input_shape)  # Define an input layer for each channel
@@ -63,7 +63,7 @@ class MAML(Classifier):
 
         # Compile the model with the specified loss, optimizer, and metrics
         model.compile(loss='categorical_crossentropy', optimizer=self.get_optimizer(), metrics=['accuracy'])
-        
+
         return model
     
     

@@ -182,14 +182,23 @@ class Experiment(ABC):
                 # print(f"{num_support_samples=}")  
                 # print(f"{num_query_samples=}")    
                 
-                print(f"{len(setup.x_train)=}")
+                # print(f"{len(setup.x_train)=}")
+                for i in range(14):
+                    support_set['x'].append([])
+                    for j in range(num_support_samples):
+                        support_set['x'][-1].append(setup.x_train[user_id][i][j])
+                #support_set['x'].extend(setup.x_train[user_id][:][:num_support_samples])
+                support_set['y'].extend(setup.y_train[user_id][:num_support_samples])
+                for i in range(14):
+                    query_set['x'].append([])
+                    for j in range(num_query_samples):
+                        query_set['x'][-1].append(setup.x_train[user_id][i][num_support_samples+j])
+                #query_set['x'].extend(setup.x_train[user_id][:][num_support_samples:])
+                query_set['y'].extend(setup.y_train[user_id][num_support_samples:])
                 
-                support_set['x'].extend(setup.x_train[user_id][:][:num_support_samples])
-                support_set['y'].extend(setup.y_train[user_id][:][:num_support_samples])
-                query_set['x'].extend(setup.x_train[user_id][:][num_support_samples:])
-                query_set['y'].extend(setup.y_train[user_id][:][num_support_samples:])
+                print(f"{len(support_set['x'][0])=}")
+                print(f"{len(support_set['y'])=}")
                 
-                # print(f"{setup.x_train[user_id][:][0]=}")
                 
                 tasks.append({'support': support_set, 'query': query_set})
             #input_shapes = tasks[0]['support']['x'][0].shape
