@@ -10,7 +10,9 @@ from clustering_mtl.kemoworkclustering import n_fold_split_cluster_trait_kemowor
 
 def prepare_dataset(name):
     if name.startswith("wesad"):
+        # n_fold_split_cluster_feature_wesad(Wesad.SUBJECTS_IDS, 15, seed=5)
         n_fold_split_cluster_feature_wesad(Wesad.SUBJECTS_IDS, 15, seed=5)
+        # n_fold_split_cluster_trait_wesad(Wesad.SUBJECTS_IDS, 15, "WESAD", seed=5)
         n_fold_split_cluster_trait_wesad(Wesad.SUBJECTS_IDS, 15, "WESAD", seed=5)
         # return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("kemowork"):

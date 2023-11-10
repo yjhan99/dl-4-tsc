@@ -146,10 +146,12 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
         test_X, test_s, test_y, sampling_rate = dataset.load_with_subjectid(path, test_subject, channels_ids)
 
         try: 
-            file_path = "./encodedresults/WESAD/encoded_results_restof_{1}.csv".format("WESAD",test_subject)
+            # file_path = "./encodedresults/WESAD/encoded_results_restof_{1}.csv".format("WESAD",test_subject)
+            file_path = "./encodedresults/WESADNEW/encoded_results_restof_{1}.csv".format("WESAD",test_subject)
             file = pd.read_csv(file_path, usecols=lambda column: column != 'Unnamed: 0')
             X_encoded_df = pd.DataFrame(file)
-            file_path = "./encodedresults/WESAD/encoded_results_{1}.csv".format("WESAD",test_subject)
+            # file_path = "./encodedresults/WESAD/encoded_results_{1}.csv".format("WESAD",test_subject)
+            file_path = "./encodedresults/WESADNEW/encoded_results_{1}.csv".format("WESAD",test_subject)
             file = pd.read_csv(file_path, usecols=lambda column: column != 'Unnamed: 0')
             test_X_encoded_df = pd.DataFrame(file)
 
@@ -252,7 +254,7 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
         clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
         cluster_labels = clusterer.fit_predict(X_encoded_scaled)
         X_encoded_df['cluster'] = list(cluster_labels)
-        X_encoded_df.to_csv(f'./archives/WESAD/feature_clustering_results_{test_subject}.csv', sep=',')
+        # X_encoded_df.to_csv(f'./archives/WESAD/feature_clustering_results_{test_subject}.csv', sep=',')
         
         test_cluster_labels = clusterer.predict(test_X_encoded_scaled)
         test_X_encoded_df['cluster'] = list(test_cluster_labels)
@@ -294,7 +296,8 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
             train_set = [x for x in rest if (x not in val_set) & (x in same_cluster)]
         print('final:', {"train": train_set, "val": val_set, "test": test_subject})
 
-        trainval = pd.read_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
+        # trainval = pd.read_csv(f'./encodedresults/WESAD/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
+        trainval = pd.read_csv(f'./encodedresults/WESADNEW/encoded_results_restof_{test_subject}.csv', sep=',', index_col=0)
         column_prefixes = ['acc_1_chest', 'acc_2_chest', 'acc_3_chest', 'ecg_chest', 'emg_chest', 'eda_chest', 'temp_chest', 'rest_chest', 
                            'acc_1_wrist', 'acc_2_wrist', 'acc_3_wrist', 'bvp_wrist', 'eda_wrist', 'temp_wrist']
         repetitions = 4
@@ -307,7 +310,8 @@ def n_fold_split_cluster_feature_wesad(subject_ids, n, seed=5):
         trainval['y_Label'] = y
         trainval['dataset'] = trainval['user_id'].apply(lambda x: np.random.choice(['Train', 'Val'], p=[0.8, 0.2]))
 
-        test = pd.read_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',', index_col=0)
+        # test = pd.read_csv(f'./encodedresults/WESAD/encoded_results_{test_subject}.csv', sep=',', index_col=0)
+        test = pd.read_csv(f'./encodedresults/WESADNEW/encoded_results_{test_subject}.csv', sep=',', index_col=0)
         test.columns = new_columns
         test['user_id'] = test['pnum']
         test['Cluster'] = test_cluster_label[0]

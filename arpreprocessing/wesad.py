@@ -134,7 +134,6 @@ class WesadSubject(Subject):
             first_index, last_index = self._indexes_for_signal(i, "label")
             label_id = scipy.stats.mstats.mode(data["label"][first_index:last_index])[0][0]
 
-            # if label_id not in [1, 2, 3]: #with baseline condition (3 class classification)
             if label_id not in [2, 3]: #without baseline condition (binary classification)
                 continue
 

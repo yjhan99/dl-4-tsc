@@ -11,6 +11,8 @@ results_augmented
 results_mtl
 encodedresults
 encodedresults_old
+encoderloss
+encodervalloss
 *.csv
 *.eps
 *.png
