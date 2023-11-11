@@ -1,5 +1,5 @@
 from arpreprocessing.case import Case
-from clustering.caseclustering import n_fold_split_cluster_trait, n_fold_split_cluster_feature
+from clustering.caseclustering import n_fold_split_cluster_trait, n_fold_split_cluster_trait_experiment, n_fold_split_cluster_feature
 from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
 SIGNALS_LEN = 9
@@ -7,7 +7,8 @@ SIGNALS_LEN = 9
 class CaseExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
         # Cluster specific (trait-based)
-        folds = n_fold_split_cluster_trait(Case.SUBJECTS_IDS, n, "Case", seed=seed)
+        # folds = n_fold_split_cluster_trait(Case.SUBJECTS_IDS, n, "Case", seed=seed)
+        folds = n_fold_split_cluster_trait_experiment(Case.SUBJECTS_IDS, n, "Case", seed=seed)
         # Cluster specific (feature-based)
         # folds = n_fold_split_cluster_feature(KEmoWork.SUBJECTS_IDS, n, seed=seed)
 

@@ -2,6 +2,7 @@ import random
 import math
 import os
 from scipy import stats
+from scipy.spatial.distance import euclidean
 
 import numpy as np
 
@@ -21,7 +22,7 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from scipy.spatial import distance
 
 
-SIGNALS_LEN = 14
+SIGNALS_LEN = 5
 
 
 def get_ndft(sampling):
@@ -41,37 +42,25 @@ def get_ndft(sampling):
 
 
 def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
     result = []
 
     random.seed(seed)
 
-    subject_ids = list(subject_ids)
-    gender_info = list()
-    age_info = list()
-
-    path = "archives/{}".format(dataset_name)
-
-    for subject_id in subject_ids:
-        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
-            for line in f:
-                words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':
-                    gender_info.append(words[1])
-                elif len(words) > 0 and words[0].lower() == 'age':
-                    age_info.append(words[1])
-
-    X = pd.DataFrame()
-    X['pnum'] = subject_ids
-    X['gender'] = gender_info
-    X['age'] = age_info
-
-    label_encoder = LabelEncoder()
-    X['gender'] = label_encoder.fit_transform(X['gender'])
-    X['age'] = label_encoder.fit_transform(X['age'])
-
-    test_sets = [subject_ids[i::n] for i in range(n)]
-
     for test_subject in test_sets:
+        print(test_subject[0])
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        file_path = "./archives/{0}/participants.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
+
+        X = file
+
+        label_encoder = LabelEncoder()
+        X['gender'] = label_encoder.fit_transform(X['gender'])
+        X['age'] = label_encoder.fit_transform(X['age'])
+
         X_test = X.loc[X['pnum']==test_subject[0]]
         X_rest = X.loc[X['pnum']!=test_subject[0]]
 
@@ -109,46 +98,33 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
                 train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
 
         result.append({"train": train_set, "val": val_set, "test": test_subject})
-
+            
     print(result)
-
 
     random.seed()
     return result
 
 
-def n_fold_split_cluster_trait_experiment(subject_ids, n, dataset_name, seed=5):
+def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
     result = []
 
     random.seed(seed)
 
-    subject_ids = list(subject_ids)
-    gender_info = list()
-    age_info = list()
-
-    path = "archives/{}".format(dataset_name)
-
-    for subject_id in subject_ids:
-        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
-            for line in f:
-                words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':
-                    gender_info.append(words[1])
-                elif len(words) > 0 and words[0].lower() == 'age':
-                    age_info.append(words[1])
-
-    X = pd.DataFrame()
-    X['pnum'] = subject_ids
-    X['gender'] = gender_info
-    X['age'] = age_info
-
-    label_encoder = LabelEncoder()
-    X['gender'] = label_encoder.fit_transform(X['gender'])
-    X['age'] = label_encoder.fit_transform(X['age'])
-
-    test_sets = [subject_ids[i::n] for i in range(n)]
-
     for test_subject in test_sets:
+        print(test_subject[0])
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        file_path = "./archives/{0}/participants.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
+
+        X = file
+
+        label_encoder = LabelEncoder()
+        X['gender'] = label_encoder.fit_transform(X['gender'])
+        X['age'] = label_encoder.fit_transform(X['age'])
+
         X_test = X.loc[X['pnum']==test_subject[0]]
         X_rest = X.loc[X['pnum']!=test_subject[0]]
 
@@ -178,46 +154,32 @@ def n_fold_split_cluster_trait_experiment(subject_ids, n, dataset_name, seed=5):
                 train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
 
         result.append({"train": train_set, "val": val_set, "test": test_subject})
-
+            
     print(result)
-
 
     random.seed()
     return result
 
 
 def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
     result = []
 
     random.seed(seed)
 
-    subject_ids = list(subject_ids)
-    gender_info = list()
-    age_info = list()
-
-    path = "archives/{}".format(dataset_name)
-
-    for subject_id in subject_ids:
-        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
-            for line in f:
-                words = line.split()
-                if len(words) > 0 and words[0].lower() == 'gender:':
-                    gender_info.append(words[1])
-                elif len(words) > 0 and words[0].lower() == 'age:':
-                    age_info.append(words[1])
-
-    X = pd.DataFrame()
-    X['pnum'] = subject_ids
-    X['gender'] = gender_info
-    X['age'] = age_info
-
-    label_encoder = LabelEncoder()
-    X['gender'] = label_encoder.fit_transform(X['gender'])
-    X['age'] = label_encoder.fit_transform(X['age'])
-
-    test_sets = [subject_ids[i::n] for i in range(n)]
-
     for test_subject in test_sets:
+        rest = [x for x in subject_ids if (x not in test_subject)]
+
+        file_path = "./archives/{0}/participants.csv".format(dataset_name)
+        file = pd.read_csv(file_path)
+
+        X = file
+
+        label_encoder = LabelEncoder()
+        X['gender'] = label_encoder.fit_transform(X['gender'])
+        X['age'] = label_encoder.fit_transform(X['age'])
+
         X_test = X.loc[X['pnum']==test_subject[0]]
         X_rest = X.loc[X['pnum']!=test_subject[0]]
 
@@ -242,7 +204,7 @@ def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
             closest_subject = closest_subjects.iloc[0]
 
         result.append({"test": test_subject, "cluster": [closest_subject]})
-        
+
         # # Cluster-as-task
         # silhouette_scores = []
         # possible_K_values = [i for i in range(2,6)]
@@ -253,14 +215,12 @@ def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
         #     silhouette_scores.append(silhouette_score(X_rest_scaled, cluster_labels))
 
         # k_value = silhouette_scores.index(min(silhouette_scores))
-        # k_value = possible_K_values[k_value]
-
-        # clusterer = KMeans(n_clusters=k_value, init='k-means++', n_init='auto', random_state=42)
+        # clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
         # cluster_labels = clusterer.fit_predict(X_rest_scaled)
         # X_rest_scaled['cluster'] = list(cluster_labels)
         # X_rest_scaled['pnum'] = X_rest['pnum'].values.tolist()
 
-        # cluster_list = [[] for _ in range(k_value)]
+        # cluster_list = [[] for _ in range(possible_K_values[k_value])]
 
         # for subject_id in rest:
         #     X_subject = X_rest_scaled.loc[X_rest_scaled['pnum']==subject_id,'cluster'].values[0]
@@ -271,11 +231,10 @@ def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
         # for idx, cluster in enumerate(list(cluster_list)):
         #     if idx == test_cluster:
         #         rest = [x for x in rest if x in cluster]
-
-        # result.append({"test": test_subject, "cluster": rest})
-
+                
+        # result.append({"cluster": rest, "test": test_subject})
+            
     print(result)
-
 
     random.seed()
     return result
