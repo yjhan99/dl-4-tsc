@@ -1,7 +1,7 @@
 from arpreprocessing.case import Case
 from experiment.experiment import Experiment, prepare_experimental_setups_n_iterations, n_fold_split
 
-SIGNALS_LEN = 9
+SIGNALS_LEN = 8
 
 class CaseExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):

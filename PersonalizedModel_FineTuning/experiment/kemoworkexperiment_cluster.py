@@ -1,6 +1,6 @@
 from arpreprocessing.kemowork import KEmoWork
-# from clustering.kemoworkclustering import n_fold_split_cluster_trait, n_fold_split_cluster_feature
-from clustering.kemoworkclustering2 import n_fold_split_cluster_trait, n_fold_split_cluster_feature
+from clustering.kemoworkclustering import n_fold_split_cluster_trait
+# from clustering.kemoworkclustering2 import n_fold_split_cluster_trait
 from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
 SIGNALS_LEN = 11
@@ -8,9 +8,9 @@ SIGNALS_LEN = 11
 class KEmoWorkExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
         # Cluster specific (trait-based)
-        # folds = n_fold_split_cluster_trait(KEmoWork.SUBJECTS_IDS, n, "KEmoWork", seed=seed)
+        folds = n_fold_split_cluster_trait(KEmoWork.SUBJECTS_IDS, n, "KEmoWork", seed=seed)
         # Cluster specific (feature-based)
-        folds = n_fold_split_cluster_feature(KEmoWork.SUBJECTS_IDS, n, seed=seed)
+        # folds = n_fold_split_cluster_feature(KEmoWork.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

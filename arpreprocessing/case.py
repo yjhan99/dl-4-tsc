@@ -13,7 +13,7 @@ from arpreprocessing.DataAugmentation_TimeseriesData import DataAugmentation
 
 class Case(PreprocessorLabel):
     SUBJECTS_IDS = range(1,31)
-    CHANNELS_NAMES = ['ecg', 'bvp', 'gsr', 'rsp', 'temp', 'skt', 'emg_zygo', 'emg_coru', 'emg_trap']
+    CHANNELS_NAMES = ['ecg', 'bvp', 'eda', 'resp', 'temp', 'emg_zygo', 'emg_coru', 'emg_trap']
 
     def __init__(self, logger, path, label_type):
         PreprocessorLabel.__init__(self, logger, path, label_type, "Case", [], None, subject_cls=CaseSubject)

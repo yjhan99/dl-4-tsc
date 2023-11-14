@@ -27,11 +27,11 @@ if __name__ == '__main__':
     # dataset = KEmoWork(GLOBAL_LOGGER, config['Paths']['kemowork_dir'], 'STRESS').get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    # dataset = Case(GLOBAL_LOGGER, config['Paths']['case_dir'], 'AROUSAL').get_dataset()
-    # dataset.save(config['Paths']['mts_out_dir'])
+    dataset = Case(GLOBAL_LOGGER, config['Paths']['case_dir'], 'AROUSAL').get_dataset()
+    dataset.save(config['Paths']['mts_out_dir'])
 
     # dataset = KEmoCon(GLOBAL_LOGGER, config['Paths']['kemocon_dir'], 'arousal').get_dataset()
     # dataset.save(config['Paths']['mts_out_dir'])
 
-    dataset = Dreamer(GLOBAL_LOGGER, config['Paths']['dreamer_dir']).get_dataset()
-    dataset.save(config['Paths']['mts_out_dir'])
+    # dataset = Dreamer(GLOBAL_LOGGER, config['Paths']['dreamer_dir']).get_dataset()
+    # dataset.save(config['Paths']['mts_out_dir'])

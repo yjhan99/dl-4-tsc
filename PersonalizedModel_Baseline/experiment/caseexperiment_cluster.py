@@ -1,8 +1,8 @@
 from arpreprocessing.case import Case
-from clustering.caseclustering import n_fold_split_cluster_trait, n_fold_split_cluster_trait_experiment, n_fold_split_cluster_feature
+from clustering.caseclustering import n_fold_split_cluster_trait, n_fold_split_cluster_trait_experiment
 from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
-SIGNALS_LEN = 9
+SIGNALS_LEN = 8
 
 class CaseExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):

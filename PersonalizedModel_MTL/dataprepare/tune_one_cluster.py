@@ -13,7 +13,7 @@ def prepare_dataset(name):
         # n_fold_split_cluster_feature_wesad(Wesad.SUBJECTS_IDS, 15, seed=5)
         n_fold_split_cluster_feature_wesad(Wesad.SUBJECTS_IDS, 15, seed=5)
         # n_fold_split_cluster_trait_wesad(Wesad.SUBJECTS_IDS, 15, "WESAD", seed=5)
-        n_fold_split_cluster_trait_wesad(Wesad.SUBJECTS_IDS, 15, "WESAD", seed=5)
+        # n_fold_split_cluster_trait_wesad(Wesad.SUBJECTS_IDS, 15, "WESAD", seed=5)
         # return WesadExperimentNFold(GLOBAL_LOGGER, int(name[-5:-3]), int(name[-2:]))
     if name.startswith("kemowork"):
         n_fold_split_cluster_feature_kemowork(KEmoWork.SUBJECTS_IDS, 19, seed=5)
