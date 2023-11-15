@@ -198,7 +198,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Low Arousal", "High Arousal"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]

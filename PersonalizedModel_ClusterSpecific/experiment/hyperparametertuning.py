@@ -8,7 +8,7 @@ import pandas as pd
 from filelock import FileLock, Timeout
 from hyperopt import fmin, tpe, hp, Trials, STATUS_OK
 
-from experiment.experiment import Experiment, Hyperparameters
+from experiment.experiment_cluster import Experiment, Hyperparameters
 from utils.loggerwrapper import GLOBAL_LOGGER
 from utils.utils import NoSuchClassifier
 
@@ -16,41 +16,41 @@ from utils.utils import NoSuchClassifier
 def get_search_space(no_channels, classifier_name):
     result = {}
 
-    # optimizer_subspace = [hp.randint("lr", -7, -1), hp.choice("decay", [.001, .0001, .00001, 0]),
-    optimizer_subspace = [hp.choice("lr", [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001]), hp.choice("decay", [.001, .0001, .00001, 0]),
-                          hp.choice("reduce_lr_factor", [0.5, 0.2, 0.1]), hp.choice("reduce_lr_patience", [5, 10])]
+    # optimizer_subspace = [hp.choice("lr", [0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001]), hp.choice("decay", [.001, .0001, .00001, 0]),
+    #                       hp.choice("reduce_lr_factor", [0.5, 0.2, 0.1]), hp.choice("reduce_lr_patience", [5, 10])]
 
-    subspace = [hp.choice(f"dense_output_{i:02d}", [250, 500, 1000]) for i in range(no_channels)]
-    space = (optimizer_subspace, hp.choice("extra_dense_layers_no", [1, 2, 3]), subspace)
-    result["mlpM"] = space
+    # subspace = [hp.choice(f"dense_output_{i:02d}", [250, 500, 1000]) for i in range(no_channels)]
+    # space = (optimizer_subspace, hp.choice("extra_dense_layers_no", [1, 2, 3]), subspace)
+    # result["mlpLstmM"] = space
+
+    # subspace1 = [hp.choice(f"filters_multiplier_{i:02d}", [0.5, 1, 2]) for i in range(no_channels)]
+    # subspace2 = [hp.choice(f"kernel_size_multipliers_{i:02d}", [0.5, 1, 2]) for i in range(no_channels)]
+    # space = (optimizer_subspace, subspace1, subspace2)
+    # result["fcnM"] = space
+
+    # subspace1 = [hp.choice(f"filters_{i:02d}", [32, 64, 128]) for i in range(no_channels)]
+    # subspace2 = [hp.choice(f"kernel_size_multiplier_{i:02d}", [1, 2, 4]) for i in range(no_channels)]
+    # space = (optimizer_subspace, hp.choice("depth", [2, 3, 4]), subspace1, subspace2)
+    # result["resnetM"] = space
+    
+    # Fixing the hyperparameters 
+    optimizer_subspace = [hp.choice("lr", [0.003]), hp.choice("decay", [0.000001]),
+                          hp.choice("reduce_lr_factor", [0.1]), hp.choice("reduce_lr_patience", [10])]
+    
+
+    subspace = [hp.choice(f"dense_output_{i:02d}", [500]) for i in range(no_channels)]
+    space = (optimizer_subspace, hp.choice("extra_dense_layers_no", [2]), subspace)
     result["mlpLstmM"] = space
 
-    subspace1 = [hp.choice(f"filters_multiplier_{i:02d}", [0.5, 1, 2]) for i in range(no_channels)]
-    subspace2 = [hp.choice(f"kernel_size_multipliers_{i:02d}", [0.5, 1, 2]) for i in range(no_channels)]
+    subspace1 = [hp.choice(f"filters_multiplier_{i:02d}", [1]) for i in range(no_channels)]
+    subspace2 = [hp.choice(f"kernel_size_multipliers_{i:02d}", [1]) for i in range(no_channels)]
     space = (optimizer_subspace, subspace1, subspace2)
-    result["mcdcnnM"] = space
-    result["cnnM"] = space
-    result["encoderM"] = space
     result["fcnM"] = space
 
-    space = (optimizer_subspace, subspace1, subspace2,
-             [hp.choice(f"lstm_units_{i:02d}", [32, 64, 128]) for i in range(no_channels)])
-    result["cnnLstmM"] = space
-
-    subspace1 = [hp.choice(f"filters_{i:02d}", [32, 64, 128]) for i in range(no_channels)]
-    subspace2 = [hp.choice(f"kernel_size_multiplier_{i:02d}", [1, 2, 4]) for i in range(no_channels)]
-    space = (optimizer_subspace, hp.choice("depth", [2, 3, 4]), subspace1, subspace2)
+    subspace1 = [hp.choice(f"filters_{i:02d}", [64]) for i in range(no_channels)]
+    subspace2 = [hp.choice(f"kernel_size_multiplier_{i:02d}", [1]) for i in range(no_channels)]
+    space = (optimizer_subspace, hp.choice("depth", [3]), subspace1, subspace2)
     result["resnetM"] = space
-
-    subspace1 = [hp.choice(f"filters_{i:02d}", [16, 32, 64]) for i in range(no_channels)]
-    subspace2 = [hp.choice(f"kernel_size_{i:02d}", [21, 41, 81]) for i in range(no_channels)]
-    space = (optimizer_subspace, hp.choice("depth", [5, 6, 7]), subspace1, subspace2)
-    result["inceptionM"] = space
-
-    subspace1 = [hp.choice(f"filters_{i:02d}", [32, 64, 128]) for i in range(no_channels)]
-    subspace2 = [hp.choice(f"kernel_size_multiplier_{i:02d}", [0.5, 1, 2]) for i in range(no_channels)]
-    space = (optimizer_subspace, hp.choice("depth", [5, 6, 7]), subspace1, subspace2)
-    result["stresnetM"] = space
 
     return result[classifier_name]
 

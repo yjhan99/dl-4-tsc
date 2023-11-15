@@ -105,7 +105,7 @@ def count_classes_representation():
             line.append(counts[dataset][i])
         results.append(line)
 
-    df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
+    df = pd.DataFrame(results, columns=["Dataset", "Low Affect", "High Affect"])
     return df
 
 
@@ -198,7 +198,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Low Affect", "High Affect"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]

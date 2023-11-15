@@ -73,8 +73,7 @@ def prepare_data(x_train, y_train, y_val, y_test):
     return input_shapes, nb_classes, y_val, y_train, y_test
 
 
-CLASSIFIERS = ("mcdcnnM", "cnnM", "mlpM", "fcnM", "encoderM", "resnetM", "inceptionM", "stresnetM", "mlpLstmM",
-               "cnnLstmM")
+CLASSIFIERS = ("fcnM", "resnetM", "mlpLstmM")
 
 
 class NoSuchClassifier(Exception):

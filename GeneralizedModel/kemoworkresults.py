@@ -14,12 +14,11 @@ def datasets_metrics():
     results = []
 
     for dataset in ["KEmoWork_19_fold"]:
-        # setups = [f"it_{it:02d}" for it in range(5)]
+    # for dataset in ["KEmoWork2_19_fold"]:
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
         for architecture in ['fcnM', 'cnnM', 'mlpLstmM', 'resnetM']:
-            # for eval_i in range(10):
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -46,7 +45,6 @@ def add_random_baseline(dataset, results, y_true, fold_i):
 
 
 def add_majority_baseline(dataset, results, y_true, fold_i):
-    # y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
     y_pred = len(y_true) * [scipy.stats.mode(y_true)[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
@@ -74,7 +72,6 @@ def get_result(architecture, dataset, eval_i, setups):
             loss.append(df_best_model["best_model_val_loss"][0])
             accuracy.append(df_metrics["accuracy"][0])
             f1.append(df_metrics["f1"][0])
-            # auc.append(df_metrics["auc"][0])
             auc.append(1-df_metrics["auc"][0])
             duration.append(df_metrics["duration"][0])
 
@@ -87,8 +84,7 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        # yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-        yield f"results_augmented/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
@@ -96,6 +92,7 @@ def count_classes_representation():
     results = []
 
     for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork2"]:
         counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
@@ -111,7 +108,6 @@ def count_classes_representation():
             line.append(counts[dataset][i])
         results.append(line)
 
-    # df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
     df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
     return df
 
@@ -120,14 +116,15 @@ def count_test_classes_representation():
     results = []
 
     for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork2"]:
         y_num = []
-        # result_path = "./results"
-        result_path = "./results_augmented"
+        result_path = "./results"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
         for folder_name in folder_names:
             if folder_name.startswith("KEmoWork_19fold_"):
+            # if folder_name.startswith("KEmoWork2_19fold_"):
                 path = os.path.join(result_path, folder_name, "tune_00/cnnM/it_00/predictions.txt")
                 if not os.path.exists(path):
                     continue
@@ -136,6 +133,7 @@ def count_test_classes_representation():
                     y_num.append(len(lines[0].strip().split()))
                     
     results.append(["KEmoWork", np.mean(y_num), np.std(y_num)])
+    # results.append(["KEmoWork2", np.mean(y_num), np.std(y_num)])
 
     df = pd.DataFrame(results, columns=["Dataset", "Num of Test Data (mean)", "Num of Test Data (std)"])
     return df
@@ -208,8 +206,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
-    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Low Stress", "High Stress"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]
@@ -260,8 +257,6 @@ def metrics_for_best_evaluations():
 
 def prepare_readable_values(results):
     results.Architecture = rename_architectures(results.Architecture)
-    # results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
-    # results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
     return results
 
 
@@ -313,6 +308,7 @@ def print_test_classes_representation():
 if __name__ == '__main__':
     results = metrics_for_best_evaluations()
     create_file_for_LOSO(results, "KEmoWork")
+    # create_file_for_LOSO(results, "KEmoWork2")
 
     # # This prints out detailed LOSO classification metrics for the best performing (highest F1 score) model
     # print_classification_metrics_for_LOSO(results)
@@ -344,6 +340,7 @@ if __name__ == '__main__':
     results = prepare_readable_values(results)
 
     create_file_for_cd_diagram(results, "KEmoWork")
+    # create_file_for_cd_diagram(results, "KEmoWork2")
 
     print_metrics_for_datasets()
 

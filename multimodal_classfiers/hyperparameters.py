@@ -13,7 +13,6 @@ class Hyperparameters():
         self.depth = depth
         self.lstm_units = lstm_units
 
-        # self.lr = 10 ** lr_power
         self.lr = lr_power
         self.decay = decay
         self.reduce_lr_factor = reduce_lr_factor

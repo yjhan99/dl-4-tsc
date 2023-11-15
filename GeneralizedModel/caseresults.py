@@ -14,12 +14,10 @@ def datasets_metrics():
     results = []
 
     for dataset in ["Case_30_fold"]:
-        # setups = [f"it_{it:02d}" for it in range(5)]
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
         for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
-            # for eval_i in range(10):
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -46,7 +44,6 @@ def add_random_baseline(dataset, results, y_true, fold_i):
 
 
 def add_majority_baseline(dataset, results, y_true, fold_i):
-    # y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
     y_pred = len(y_true) * [scipy.stats.mode(y_true)[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
@@ -74,7 +71,6 @@ def get_result(architecture, dataset, eval_i, setups):
             loss.append(df_best_model["best_model_val_loss"][0])
             accuracy.append(df_metrics["accuracy"][0])
             f1.append(df_metrics["f1"][0])
-            # auc.append(df_metrics["auc"][0])
             auc.append(1-df_metrics["auc"][0])
             duration.append(df_metrics["duration"][0])
 
@@ -88,7 +84,6 @@ def get_result(architecture, dataset, eval_i, setups):
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
         yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-        # yield f"results_augmented/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
@@ -106,13 +101,11 @@ def count_classes_representation():
         counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
-        # for i in range(1, 4):
         for i in range(0, 2):
             line.append(counts[dataset][i])
         results.append(line)
 
-    # df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
-    df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
+    df = pd.DataFrame(results, columns=["Dataset", "Low Affect", "High Affect"])
     return df
 
 
@@ -122,7 +115,6 @@ def count_test_classes_representation():
     for dataset in ["Case"]:
         y_num = []
         result_path = "./results"
-        # result_path = "./results_augmented"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
@@ -164,9 +156,7 @@ def classification_metrics_for_evaluation(dataset: str, eval_list: list, archite
     aggregated_classification_reports = {}
 
     for fold_i, eval_i in enumerate(eval_list):
-        # for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
         for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 15,
-                                                    #    [f"it_{it:02d}" for it in range(5)]):
                                                        [f"it_{it:02d}" for it in range(1)]):
             with open(f"{setup_path}/predictions.txt") as f:
                 y_true = [int(x) for x in f.readline().split()]
@@ -208,8 +198,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
-    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Low Affect", "High Affect"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]
@@ -260,8 +249,6 @@ def metrics_for_best_evaluations():
 
 def prepare_readable_values(results):
     results.Architecture = rename_architectures(results.Architecture)
-    # results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
-    # results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
     return results
 
 

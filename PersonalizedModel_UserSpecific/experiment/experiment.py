@@ -15,8 +15,7 @@ from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
 from multimodal_classfiers.resnet import ClassifierResnet
 from utils.utils import get_new_session, prepare_data
 
-CLASSIFIERS = ("mcdcnnM", "cnnM", "mlpM", "fcnM", "encoderM", "resnetM", "inceptionM", "stresnetM", "mlpLstmM",
-               "cnnLstmM")
+CLASSIFIERS = ("fcnM", "resnetM", "mlpLstmM")
 
 
 class NoSuchClassifier(Exception):

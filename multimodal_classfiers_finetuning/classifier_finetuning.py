@@ -156,7 +156,6 @@ class Classifier(ABC):
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
-        # return save_logs_no_val(self.output_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
         return save_logs(self.output_tuning_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
 
 

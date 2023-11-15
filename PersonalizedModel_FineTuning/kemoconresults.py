@@ -83,7 +83,8 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        yield f"results_mtl/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        # yield f"results_cluster_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
@@ -105,7 +106,7 @@ def count_classes_representation():
             line.append(counts[dataset][i])
         results.append(line)
 
-    df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
+    df = pd.DataFrame(results, columns=["Dataset", "Low Arousal", "High Arousal"])
     return df
 
 
@@ -114,7 +115,8 @@ def count_test_classes_representation():
 
     for dataset in ["KEmoCon"]:
         y_num = []
-        result_path = "./results_mtl"
+        result_path = "./results_tuning"
+        # result_path = "./results_cluster_tuning"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
@@ -213,7 +215,6 @@ def print_classification_metrics_for_classes(results, evaluation_df):
 def print_classification_metrics_for_LOSO(results):
     temp_results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
     temp_results = temp_results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
-    # metrics = []
     for dataset in temp_results.Dataset.unique():
         results_for_dataset = temp_results[
             (temp_results.Dataset == dataset) & (temp_results.Architecture != "Random guess") & (

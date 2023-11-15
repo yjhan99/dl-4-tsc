@@ -72,7 +72,6 @@ def get_result(architecture, dataset, eval_i, setups):
             loss.append(df_best_model["best_model_val_loss"][0])
             accuracy.append(df_metrics["accuracy"][0])
             f1.append(df_metrics["f1"][0])
-            # auc.append(df_metrics["auc"][0])
             auc.append(1-df_metrics["auc"][0])
             duration.append(df_metrics["duration"][0])
 
@@ -205,7 +204,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
+    metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Low Stress", "High Stress"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         columns = [0, 1, 6, 2, 4, 8]
@@ -339,7 +338,8 @@ if __name__ == '__main__':
 
     results = prepare_readable_values(results)
 
-    create_file_for_cd_diagram(results, "KEmoWork")
+    # create_file_for_cd_diagram(results, "KEmoWork")
+    create_file_for_cd_diagram(results, "KEmoWork2")
 
     print_metrics_for_datasets()
 
