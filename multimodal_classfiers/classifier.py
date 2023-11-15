@@ -3,7 +3,6 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-# from keras.optimizers import Adam
 from keras.optimizers.legacy import Adam
 
 from multimodal_classfiers.hyperparameters import Hyperparameters

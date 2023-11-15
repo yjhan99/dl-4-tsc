@@ -15,12 +15,10 @@ def datasets_metrics():
     results = []
 
     for dataset in ["WESAD_15_fold"]:
-        # setups = [f"it_{it:02d}" for it in range(5)]
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
-            # for eval_i in range(10):
+        for architecture in ['fcnM', 'resnetM', 'mlpLstmM']:
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -47,7 +45,6 @@ def add_random_baseline(dataset, results, y_true, fold_i):
 
 
 def add_majority_baseline(dataset, results, y_true, fold_i):
-    # y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
     y_pred = len(y_true) * [scipy.stats.mode(y_true)[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
@@ -87,9 +84,7 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        # yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
         yield f"results_mtl/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-
 
 def count_classes_representation():
     counts = {}
@@ -106,12 +101,10 @@ def count_classes_representation():
         counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
-        # for i in range(1, 5):
         for i in range(1, 4):
             line.append(counts[dataset][i])
         results.append(line)
 
-    # df = pd.DataFrame(results, columns=["Dataset", "LALV", "LAHV", "HALV", "HAHV"])
     df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
     return df
 
@@ -121,7 +114,6 @@ def count_test_classes_representation():
 
     for dataset in ["WESAD"]:
         y_num = []
-        # result_path = "./results"
         result_path = "./results_mtl"
         folder_names = os.listdir(result_path)
         folder_names.sort()
@@ -164,9 +156,7 @@ def classification_metrics_for_evaluation(dataset: str, eval_list: list, archite
     aggregated_classification_reports = {}
 
     for fold_i, eval_i in enumerate(eval_list):
-        # for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
         for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 15,
-                                                    #    [f"it_{it:02d}" for it in range(5)]):
                                                        [f"it_{it:02d}" for it in range(1)]):
             with open(f"{setup_path}/predictions.txt") as f:
                 y_true = [int(x) for x in f.readline().split()]
@@ -208,7 +198,6 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
     metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
@@ -224,7 +213,6 @@ def print_classification_metrics_for_classes(results, evaluation_df):
 def print_classification_metrics_for_LOSO(results):
     temp_results = results.sort_values("Fold", ascending=True).groupby(["Dataset", "Architecture"])
     temp_results = temp_results.mean().drop(columns=["Fold", "Evaluation"]).reset_index()
-    # metrics = []
     for dataset in temp_results.Dataset.unique():
         results_for_dataset = temp_results[
             (temp_results.Dataset == dataset) & (temp_results.Architecture != "Random guess") & (
@@ -260,8 +248,6 @@ def metrics_for_best_evaluations():
 
 def prepare_readable_values(results):
     results.Architecture = rename_architectures(results.Architecture)
-    # results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
-    # results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
     return results
 
 

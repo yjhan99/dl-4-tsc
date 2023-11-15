@@ -1,6 +1,5 @@
-import math
-import os
-import random
+import math, os, random
+from collections import defaultdict
 from abc import ABC, abstractmethod
 
 import numpy as np
@@ -8,7 +7,7 @@ import tensorflow as tf
 from filelock import Timeout, FileLock
 from tensorflow import Graph
 
-from arpreprocessing.dataset import Dataset 
+from arpreprocessing.dataset import Dataset
 from multimodal_classfiers.fcn import ClassifierFcn
 from multimodal_classfiers.hyperparameters import Hyperparameters
 from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
@@ -64,7 +63,7 @@ class Experiment(ABC):
         self.logger_obj = logger
         self.experimental_setups = None
         self.no_channels = no_channels
-        self.experiment_path = f"results/{self.dataset_name}{dataset_name_suffix}"
+        self.experiment_path = f"results_cluster/{self.dataset_name}{dataset_name_suffix}"
 
         self.prepare_experimental_setups()
 
@@ -134,11 +133,55 @@ class Experiment(ABC):
 
 
 def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_ids, name, dataset_name):
-    path = "archives/mts_archive"
-    dataset = Dataset(dataset_name, None, logger_obj)
+    if train_ids == val_ids:
+        path = "archives/mts_archive"
+        dataset = Dataset(dataset_name, None, logger_obj)
+        x, y, sampling_rate = dataset.load(path, train_ids, channels_ids)
+        
+        x_val, x_train = [[] for i in range(max(channels_ids) + 1)], [[] for i in range(max(channels_ids) + 1)]
+        y_val, y_train = [], []
+        sampling_val, sampling_train = sampling_rate, sampling_rate
+
+        indices_by_label = defaultdict(list)
+        for i, label in enumerate(y):
+            indices_by_label[label].append(i)
+
+        for channel_id in range(len(channels_ids)):
+            signal = x[channel_id]
+
+            x_train_indices = []
+            y_train_indices = []
+            x_val_indices = []
+            y_val_indices = []
+
+            for label, indices in indices_by_label.items():
+                selected_indices = indices[math.ceil(len(y)/5):len(y)]
+                x_train_indices.extend(selected_indices)
+
+                leftover_indices = list(set(indices) - set(selected_indices))
+                x_val_indices.extend(leftover_indices)
+
+                if channel_id == (len(channels_ids)-1):
+                    y_train_indices.extend(selected_indices)
+                    y_val_indices.extend(leftover_indices)
+
+            for i in x_train_indices:
+                x_train[channel_id].append(signal[i])
+            for i in x_val_indices:
+                x_val[channel_id].append(signal[i])
+
+        for i in y_train_indices:
+            y_train.append(y[i])
+        for i in y_val_indices:
+            y_val.append(y[i])
+
+    else:
+        path = "archives/mts_archive"
+        dataset = Dataset(dataset_name, None, logger_obj)
+        x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
+        x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
+
     x_test, y_test, sampling_test = dataset.load(path, test_ids, channels_ids)
-    x_val, y_val, sampling_val = dataset.load(path, val_ids, channels_ids)
-    x_train, y_train, sampling_train = dataset.load(path, train_ids, channels_ids)
     x_train = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_train]
     x_val = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_val]
     x_test = [np.expand_dims(np.array(x, dtype=object), 2) for x in x_test]
@@ -154,7 +197,6 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
     experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, input_shapes,
                                            sampling_val, ndft_arr, nb_classes, lambda x: 100, get_batch_size)
-                                        #    sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
     return experimental_setup
 
 
@@ -195,15 +237,13 @@ def n_fold_split(subject_ids, n, seed=5):
     test_sets = [subject_ids[i::n] for i in range(n)]
 
     for test_set in test_sets:
-        rest = [x for x in subject_ids if x not in test_set]
-        val_set = random.sample(rest, math.ceil(len(rest) / 5))
-        train_set = [x for x in rest if x not in val_set]
-        result.append({"train": train_set, "val": val_set, "test": test_set})
+        result.append({"train": test_set, "val": test_set, "test": test_set})
 
     random.seed()
     return result
 
 
+# def prepare_experimental_setups_n_iterations(self_experiment: Experiment, train_ids, val_ids, test_ids, iterations=5):
 # # For paper, we might need more iterations
 def prepare_experimental_setups_n_iterations(self_experiment: Experiment, train_ids, val_ids, test_ids, iterations=1):
     self_experiment.experimental_setups = []

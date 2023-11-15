@@ -13,13 +13,12 @@ KEmoWork_SUBJECTS = [1,2,3,4,8,10,12,13,14,16,18,19,20,21,22,23,25,26,27]
 def datasets_metrics():
     results = []
 
-    for dataset in ["KEmoWork_19_fold"]:
-        # setups = [f"it_{it:02d}" for it in range(5)]
+    # for dataset in ["KEmoWork_19_fold"]:
+    for dataset in ["KEmoWork2_19_fold"]:
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'cnnM', 'mlpLstmM', 'resnetM']:
-            # for eval_i in range(10):
+        for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -46,7 +45,6 @@ def add_random_baseline(dataset, results, y_true, fold_i):
 
 
 def add_majority_baseline(dataset, results, y_true, fold_i):
-    # y_pred = len(y_true) * [scipy.stats.mode(y_true).mode[0]]
     y_pred = len(y_true) * [scipy.stats.mode(y_true)[0]]
     accuracy = accuracy_score(y_true, y_pred)
     f1 = f1_score(y_true, y_pred, average='macro')
@@ -87,15 +85,15 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        # yield f"results/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-        yield f"results_cluster_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results_mtl/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
     counts = {}
     results = []
 
-    for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork"]:
+    for dataset in ["KEmoWork2"]:
         counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
@@ -106,12 +104,10 @@ def count_classes_representation():
         counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
-        # for i in range(1, 4):
         for i in range(0, 2):
             line.append(counts[dataset][i])
         results.append(line)
 
-    # df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
     df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
     return df
 
@@ -119,16 +115,17 @@ def count_classes_representation():
 def count_test_classes_representation():
     results = []
 
-    for dataset in ["KEmoWork"]:
+    # for dataset in ["KEmoWork"]:
+    for dataset in ["KEmoWork2"]:
         y_num = []
-        # result_path = "./results"
-        result_path = "./results_cluster_tuning"
+        result_path = "./results_mtl"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
         for folder_name in folder_names:
-            if folder_name.startswith("KEmoWork_19fold_"):
-                path = os.path.join(result_path, folder_name, "tune_00/cnnM/it_00/predictions.txt")
+            # if folder_name.startswith("KEmoWork_19fold_"):
+            if folder_name.startswith("KEmoWork2_19fold_"):
+                path = os.path.join(result_path, folder_name, "tune_00/fcnM/it_00/predictions.txt")
                 if not os.path.exists(path):
                     continue
                 with open(path, 'r') as f:
@@ -164,9 +161,7 @@ def classification_metrics_for_evaluation(dataset: str, eval_list: list, archite
     aggregated_classification_reports = {}
 
     for fold_i, eval_i in enumerate(eval_list):
-        # for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 5,
         for setup_path in paths_with_results_generator(architecture, dataset, eval_i, fold_i, 15,
-                                                    #    [f"it_{it:02d}" for it in range(5)]):
                                                        [f"it_{it:02d}" for it in range(1)]):
             with open(f"{setup_path}/predictions.txt") as f:
                 y_true = [int(x) for x in f.readline().split()]
@@ -208,7 +203,6 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
-    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
     metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
@@ -260,8 +254,6 @@ def metrics_for_best_evaluations():
 
 def prepare_readable_values(results):
     results.Architecture = rename_architectures(results.Architecture)
-    # results["Duration (min)"] = results["Duration (min)"].map('{:,.1f}'.format)
-    # results["Duration (std)"] = results["Duration (std)"].map("{:,.1f}".format)
     return results
 
 

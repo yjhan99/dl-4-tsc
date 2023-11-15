@@ -1,12 +1,13 @@
 from arpreprocessing.case import Case
-from experiment.experiment import Experiment, prepare_experimental_setups_n_iterations, n_fold_split
+from clustering.caseclustering import n_fold_split_cluster_trait, n_fold_split_cluster_trait_experiment
+from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
 SIGNALS_LEN = 8
 
-
 class CaseExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
-        folds = n_fold_split(Case.SUBJECTS_IDS, n, seed=seed)
+        folds = n_fold_split_cluster_trait(Case.SUBJECTS_IDS, n, "Case", seed=seed)
+        # folds = n_fold_split_cluster_trait_experiment(Case.SUBJECTS_IDS, n, "Case", seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

@@ -2,7 +2,6 @@ import random
 import math
 import os
 from scipy import stats
-from scipy.spatial.distance import euclidean
 
 import numpy as np
 

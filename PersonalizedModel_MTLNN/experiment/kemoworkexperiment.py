@@ -9,7 +9,7 @@ class KEmoWorkExperimentNFold(Experiment):
         folds = n_fold_split(KEmoWork.SUBJECTS_IDS, n, seed=seed)
 
         clusters = n_fold_split_cluster_trait_mtl(KEmoWork.SUBJECTS_IDS, n, "KEmoWork", seed=seed)
-        # clusters = n_fold_split_cluster_feature_mtl(KEmoWork.SUBJECTS_IDS, n, seed=seed)
+        # clusters = n_fold_split_cluster_trait_mtl(KEmoWork.SUBJECTS_IDS, n, "KEmoWork2", seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

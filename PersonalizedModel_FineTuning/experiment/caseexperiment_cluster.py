@@ -6,10 +6,7 @@ SIGNALS_LEN = 8
 
 class CaseExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
-        # Cluster specific (trait-based)
         folds = n_fold_split_cluster_trait(Case.SUBJECTS_IDS, n, "Case", seed=seed)
-        # Cluster specific (feature-based)
-        # folds = n_fold_split_cluster_feature(Case.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

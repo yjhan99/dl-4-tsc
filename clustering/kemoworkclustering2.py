@@ -2,7 +2,6 @@
 # import math
 # import os
 # from scipy import stats
-# from scipy.spatial.distance import euclidean
 
 # import numpy as np
 
@@ -18,7 +17,7 @@
 # from sklearn.decomposition import PCA
 # from sklearn.cluster import KMeans
 # from sklearn.metrics import silhouette_score
-# from sklearn.preprocessing import MinMaxScaler
+# from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 # from scipy.spatial import distance
 
 
@@ -108,7 +107,7 @@
 #     return result
 
 
-# def n_fold_split_cluster_trait_mtl_old(subject_ids, n, dataset_name, seed=5):
+# def n_fold_split_cluster_trait_experiment(subject_ids, n, dataset_name, seed=5):
 #     test_sets = [subject_ids[i::n] for i in range(n)]
 
 #     result = []
@@ -139,21 +138,13 @@
 #         X_test_pca = pd.DataFrame(pca.transform(X_test_scaled))
 #         X_rest_pca = pd.DataFrame(pca.transform(X_rest_scaled))
 
-#         silhouette_scores = []
-#         possible_K_values = [i for i in range(2,6)]
-
-#         for each_value in possible_K_values:
-#             clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
-#             cluster_labels = clusterer.fit_predict(X_rest_pca)
-#             silhouette_scores.append(silhouette_score(X_rest_pca, cluster_labels))
-
-#         k_value = silhouette_scores.index(min(silhouette_scores))
-#         clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+#         k_value = 6
+#         clusterer = KMeans(n_clusters=k_value, init='k-means++', n_init='auto', random_state=42)
 #         cluster_labels = clusterer.fit_predict(X_rest_pca)
 #         X_rest_pca['cluster'] = list(cluster_labels)
 #         X_rest_pca['pnum'] = X_rest['pnum'].values.tolist()
 
-#         cluster_list = [[] for _ in range(possible_K_values[k_value])]
+#         cluster_list = [[] for _ in range(k_value)]
 
 #         for subject_id in rest:
 #             X_subject = X_rest_pca.loc[X_rest_pca['pnum']==subject_id,'cluster'].values[0]
@@ -164,8 +155,13 @@
 #         for idx, cluster in enumerate(list(cluster_list)):
 #             if idx == test_cluster:
 #                 rest = [x for x in rest if x in cluster]
+#                 if len(rest) == 1:
+#                     val_set, train_set = rest, rest
+#                 else:
+#                     val_set = random.sample(rest, math.ceil(len(rest) / 5))
+#                     train_set = [x for x in rest if (x not in val_set) & (x in cluster)]
 
-#         result.append({"cluster": rest, "test": test_subject})
+#         result.append({"train": train_set, "val": val_set, "test": test_subject})
             
 #     print(result)
 
@@ -221,34 +217,34 @@
 
 #         result.append({"test": test_subject, "cluster": [closest_subject]})
 
-#         #Cluster-as-task
-#         silhouette_scores = []
-#         possible_K_values = [i for i in range(2,6)]
+#         # # Cluster-as-task
+#         # silhouette_scores = []
+#         # possible_K_values = [i for i in range(2,6)]
 
-#         for each_value in possible_K_values:
-#             clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
-#             cluster_labels = clusterer.fit_predict(X_rest_pca)
-#             silhouette_scores.append(silhouette_score(X_rest_pca, cluster_labels))
+#         # for each_value in possible_K_values:
+#         #     clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+#         #     cluster_labels = clusterer.fit_predict(X_rest_pca)
+#         #     silhouette_scores.append(silhouette_score(X_rest_pca, cluster_labels))
 
-#         k_value = silhouette_scores.index(min(silhouette_scores))
-#         clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
-#         cluster_labels = clusterer.fit_predict(X_rest_pca)
-#         X_rest_pca['cluster'] = list(cluster_labels)
-#         X_rest_pca['pnum'] = X_rest['pnum'].values.tolist()
+#         # k_value = silhouette_scores.index(min(silhouette_scores))
+#         # clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+#         # cluster_labels = clusterer.fit_predict(X_rest_pca)
+#         # X_rest_pca['cluster'] = list(cluster_labels)
+#         # X_rest_pca['pnum'] = X_rest['pnum'].values.tolist()
 
-#         cluster_list = [[] for _ in range(possible_K_values[k_value])]
+#         # cluster_list = [[] for _ in range(possible_K_values[k_value])]
 
-#         for subject_id in rest:
-#             X_subject = X_rest_pca.loc[X_rest_pca['pnum']==subject_id,'cluster'].values[0]
-#             cluster_list[X_subject].append(subject_id)
+#         # for subject_id in rest:
+#         #     X_subject = X_rest_pca.loc[X_rest_pca['pnum']==subject_id,'cluster'].values[0]
+#         #     cluster_list[X_subject].append(subject_id)
 
-#         test_cluster = clusterer.predict(X_test_pca)
+#         # test_cluster = clusterer.predict(X_test_pca)
 
-#         for idx, cluster in enumerate(list(cluster_list)):
-#             if idx == test_cluster:
-#                 rest = [x for x in rest if x in cluster]
+#         # for idx, cluster in enumerate(list(cluster_list)):
+#         #     if idx == test_cluster:
+#         #         rest = [x for x in rest if x in cluster]
 
-#         result.append({"cluster": rest, "test": test_subject})
+#         # result.append({"cluster": rest, "test": test_subject})
             
 #     print(result)
 

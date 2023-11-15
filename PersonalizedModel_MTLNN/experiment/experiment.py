@@ -9,28 +9,10 @@ from filelock import Timeout, FileLock
 from tensorflow import Graph
 
 from arpreprocessing.dataset import Dataset
-# from multimodal_classfiers.cnn_lstm import ClassifierCnnLstm
-from multimodal_classfiers_mtl.cnn_lstm import ClassifierCnnLstm
-# from multimodal_classfiers.encoder import ClassifierEncoder
-from multimodal_classfiers_mtl.encoder import ClassifierEncoder
-# from multimodal_classfiers.fcn import ClassifierFcn
 from multimodal_classfiers_mtl.fcn import ClassifierFcn
-# from multimodal_classfiers.hyperparameters import Hyperparameters
 from multimodal_classfiers_mtl.hyperparameters import Hyperparameters
-# from multimodal_classfiers.inception_time import ClassifierInception
-from multimodal_classfiers_mtl.inception_time import ClassifierInception
-# from multimodal_classfiers.mcdcnn import ClassifierMcdcnn
-from multimodal_classfiers_mtl.mcdcnn import ClassifierMcdcnn
-# from multimodal_classfiers.mlp import ClassifierMlp
-from multimodal_classfiers_mtl.mlp import ClassifierMlp
-# from multimodal_classfiers.mlp_lstm import ClassifierMlpLstm
 from multimodal_classfiers_mtl.mlp_lstm import ClassifierMlpLstm
-# from multimodal_classfiers.resnet import ClassifierResnet
 from multimodal_classfiers_mtl.resnet import ClassifierResnet
-# from multimodal_classfiers.stresnet import ClassifierStresnet
-from multimodal_classfiers_mtl.stresnet import ClassifierStresnet
-# from multimodal_classfiers.time_cnn import ClassifierTimeCnn
-from multimodal_classfiers_mtl.time_cnn import ClassifierTimeCnn
 from utils.utils import get_new_session
 
 import sklearn
@@ -105,33 +87,9 @@ def create_classifier(classifier_name, input_shapes, nb_classes, output_director
     if classifier_name == 'fcnM':
         return ClassifierFcn(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
                              model_init=model_init)
-    if classifier_name == 'mlpM':
-        return ClassifierMlp(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
-                             model_init=model_init)
     if classifier_name == 'resnetM':
         return ClassifierResnet(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                 model_init=model_init)
-    if classifier_name == 'encoderM':
-        return ClassifierEncoder(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
-                                 model_init=model_init)
-    if classifier_name == 'mcdcnnM':
-        return ClassifierMcdcnn(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
-                                model_init=model_init)
-    if classifier_name == 'cnnM':
-        return ClassifierTimeCnn(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
-                                 model_init=model_init)
-    if classifier_name == 'inceptionM':
-        depth = hyperparameters.depth if hyperparameters and hyperparameters.depth else 6
-        return ClassifierInception(output_directory, output_mtl_directory, input_shapes, nb_classes, depth=depth, verbose=verbose,
-                                   hyperparameters=hyperparameters, model_init=model_init)
-    if classifier_name == 'stresnetM':
-        return ClassifierStresnet(output_directory, output_mtl_directory, input_shapes, sampling_rates,
-                                  ndft_arr, nb_classes, verbose=verbose,
-                                  hyperparameters=hyperparameters,
-                                  model_init=model_init)
-    if classifier_name == 'cnnLstmM':
-        return ClassifierCnnLstm(output_directory, output_mtl_directory, input_shapes, nb_classes, hyperparameters=hyperparameters,
-                                 model_init=model_init)
     if classifier_name == 'mlpLstmM':
         return ClassifierMlpLstm(output_directory, output_mtl_directory, input_shapes, nb_classes, verbose, hyperparameters,
                                  model_init=model_init)
@@ -207,10 +165,10 @@ class Experiment(ABC):
         self.logger_obj.info(logging_message)
 
         with FileLock(output_directory + "DOING.lock", timeout=0):
-            # done_dict_path = output_directory + "DONE"
-            # if os.path.exists(done_dict_path):
-            #     self.logger_obj.info("Experiment already performed")
-            #     return
+            done_dict_path = output_directory + "DONE"
+            if os.path.exists(done_dict_path):
+                self.logger_obj.info("Experiment already performed")
+                return
             
             done_dict_path = output_mtl_directory + "DONE"
             if os.path.exists(done_dict_path):
@@ -272,7 +230,6 @@ def get_experimental_setup(logger_obj, channels_ids, test_ids, train_ids, val_id
             raise Exception(
                 f"Too big ndft, i: {i}, ndft_arr[i]: {ndft_arr[i]}, input_shapes[i][0]: {input_shapes[i][0]}")
     experimental_setup = ExperimentalSetup(name, x_train, y_train, x_val, y_val, x_test, y_test, x_cluster, y_cluster, input_shapes,
-                                        #    sampling_val, ndft_arr, nb_classes, lambda x: 150, get_batch_size)
                                            sampling_val, ndft_arr, nb_classes, lambda x: 100, get_batch_size)
     return experimental_setup
 
@@ -294,12 +251,8 @@ def get_ndft(sampling):
 
 
 def get_batch_size(classifier_name):
-    if classifier_name == "inceptionM":
-        return 2
     if classifier_name == "resnetM":
         return 4
-    if classifier_name == "encoderM":
-        return 2
     if classifier_name == "mlpLstmM":
         return 16
     if classifier_name == "fcnM":

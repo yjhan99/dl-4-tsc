@@ -9,7 +9,6 @@ class CaseExperimentNFold(Experiment):
         folds = n_fold_split(Case.SUBJECTS_IDS, n, seed=seed)
 
         clusters = n_fold_split_cluster_trait_mtl(Case.SUBJECTS_IDS, n, "Case", seed=seed)
-        # clusters = n_fold_split_cluster_feature_mtl(Case.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]

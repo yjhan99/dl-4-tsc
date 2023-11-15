@@ -33,7 +33,6 @@ def original_sampling(channel_name: str):
 def target_sampling(channel_name: str):
     if channel_name == "label":
         return 20
-        # return 10
     else:
         return 50
     raise NoSuchSignal(channel_name)
@@ -79,7 +78,6 @@ class CaseSubject(SubjectLabel):
     @staticmethod
     def restructure_data(data, label_type):
         new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
-        # new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
         for sensor in data['signal']:
             print('sensor:', sensor)
             data['signal'][sensor] = data['signal'][sensor].reshape(-1,1)

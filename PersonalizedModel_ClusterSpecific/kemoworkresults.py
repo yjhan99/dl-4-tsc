@@ -8,17 +8,16 @@ import pandas as pd
 import scipy.stats
 from sklearn.metrics import accuracy_score, f1_score, classification_report
 
-WESAD_SUBJECTS = list(itertools.chain(range(2, 12), range(13, 18)))
-
+KEmoWork_SUBJECTS = [1,2,3,4,8,10,12,13,14,16,18,19,20,21,22,23,25,26,27]
 
 def datasets_metrics():
     results = []
 
-    for dataset in ["WESAD_15_fold"]:
+    for dataset in ["KEmoWork_19_fold"]:
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'resnetM', 'mlpLstmM']:
+        for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -84,15 +83,14 @@ def get_result(architecture, dataset, eval_i, setups):
 
 def paths_with_results_generator(architecture, dataset, eval_i, fold_i, folds_n, setups):
     for setup in setups:
-        yield f"results_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
-        # yield f"results_cluster_tuning/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
+        yield f"results_cluster/{dataset}_{folds_n}fold_{fold_i:02d}/tune_{eval_i:02d}/{architecture}/{setup}/"
 
 
 def count_classes_representation():
     counts = {}
     results = []
 
-    for dataset in ["WESAD"]:
+    for dataset in ["KEmoWork"]:
         counts[dataset] = []
         for subject in range(100):
             path = f"archives/mts_archive/{dataset}/y_{subject}.pkl"
@@ -103,26 +101,25 @@ def count_classes_representation():
         counts[dataset] = Counter(counts[dataset])
 
         line = [dataset]
-        for i in range(1, 4):
+        for i in range(0, 2):
             line.append(counts[dataset][i])
         results.append(line)
 
-    df = pd.DataFrame(results, columns=["Dataset", "Baseline", "Stress", "Amuesement"])
+    df = pd.DataFrame(results, columns=["Dataset", "Low Stress", "High Stress"])
     return df
 
 
 def count_test_classes_representation():
     results = []
 
-    for dataset in ["WESAD"]:
+    for dataset in ["KEmoWork"]:
         y_num = []
-        result_path = "./results_tuning"
-        # result_path = "./results_cluster_tuning"
+        result_path = "./results_cluster"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
         for folder_name in folder_names:
-            if folder_name.startswith("WESAD_15fold_"):
+            if folder_name.startswith("KEmoWork_19fold_"):
                 path = os.path.join(result_path, folder_name, "tune_00/fcnM/it_00/predictions.txt")
                 if not os.path.exists(path):
                     continue
@@ -130,7 +127,7 @@ def count_test_classes_representation():
                     lines = f.readlines()
                     y_num.append(len(lines[0].strip().split()))
                     
-    results.append(["WESAD", np.mean(y_num), np.std(y_num)])
+    results.append(["KEmoWork", np.mean(y_num), np.std(y_num)])
 
     df = pd.DataFrame(results, columns=["Dataset", "Num of Test Data (mean)", "Num of Test Data (std)"])
     return df
@@ -201,6 +198,7 @@ def print_classification_metrics_for_classes(results, evaluation_df):
     metrics = pd.DataFrame(metrics, columns=["Dataset", "Class", "Precision", "Precision (std)", "Recall",
                                              "Recall (std)", "F1-score", "F1-score (std)", "Support"])
 
+    # metrics.Class = metrics.Class.apply(lambda x: ["LALV", "LAHV", "HALV", "HAHV"][x])
     metrics.Class = metrics.Class.apply(lambda x: ["Baseline", "Stress", "Amuesement"][x])
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
@@ -227,7 +225,7 @@ def print_classification_metrics_for_LOSO(results):
 
     with pd.option_context("display.float_format", "{:,.2f}".format):
         latex = prepare_latex_for_paper(best_results.to_latex(index=False, column_format="|l|l|r|r|r|"),
-                                        f"Best performing model for WESAD in detail", f"tab:datasetsClassesLOSO")
+                                        f"Best performing model for KEmoWork in detail", f"tab:datasetsClassesLOSO")
                 
         print(latex)
 
@@ -292,6 +290,7 @@ def print_classes_representation():
                                         f"Classes balance in datasets in percentage", f"tab:datasetsClassesBalancePerc")
         print(latex)
 
+
 def print_test_classes_representation():
     df = count_test_classes_representation()
     with pd.option_context("display.float_format", "{:,.0f}%".format):
@@ -299,9 +298,10 @@ def print_test_classes_representation():
                                         f"Number of Test Data", f"tab:testdatanum")
         print(latex)
 
+
 if __name__ == '__main__':
     results = metrics_for_best_evaluations()
-    create_file_for_LOSO(results, "WESAD")
+    create_file_for_LOSO(results, "KEmoWork")
 
     # # This prints out detailed LOSO classification metrics for the best performing (highest F1 score) model
     # print_classification_metrics_for_LOSO(results)
@@ -332,7 +332,7 @@ if __name__ == '__main__':
 
     results = prepare_readable_values(results)
 
-    create_file_for_cd_diagram(results, "WESAD")
+    create_file_for_cd_diagram(results, "KEmoWork")
 
     print_metrics_for_datasets()
 

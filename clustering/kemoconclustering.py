@@ -2,7 +2,6 @@ import random
 import math
 import os
 from scipy import stats
-from scipy.spatial.distance import euclidean
 
 import numpy as np
 
@@ -105,7 +104,7 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     return result
 
 
-def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
+def n_fold_split_cluster_trait_experiment(subject_ids, n, dataset_name, seed=5):
     test_sets = [subject_ids[i::n] for i in range(n)]
 
     result = []
