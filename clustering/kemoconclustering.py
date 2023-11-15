@@ -48,7 +48,6 @@ def n_fold_split_cluster_trait(subject_ids, n, dataset_name, seed=5):
     random.seed(seed)
 
     for test_subject in test_sets:
-        print(test_subject[0])
         rest = [x for x in subject_ids if (x not in test_subject)]
 
         file_path = "./archives/{0}/participants.csv".format(dataset_name)

@@ -7,7 +7,6 @@ SIGNALS_LEN = 14
 
 class WesadExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
-        # Person specific
         folds = n_fold_split(Wesad.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]

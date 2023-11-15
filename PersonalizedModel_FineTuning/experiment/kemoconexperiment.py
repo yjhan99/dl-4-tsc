@@ -5,7 +5,7 @@ SIGNALS_LEN = 5
 
 class KEmoConExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):
-        folds = n_fold_split(KEmoCon.SUBJECTS_IDS, n, "KEmoCon", seed=seed)
+        folds = n_fold_split(KEmoCon.SUBJECTS_IDS, n, seed=seed)
 
         self.test_ids = folds[i]["test"]
         self.val_ids = folds[i]["val"]
