@@ -2,7 +2,7 @@ from arpreprocessing.kemocon import KEmoCon
 from clustering.kemoconclustering import n_fold_split_cluster_trait
 from experiment.experiment_cluster import Experiment, prepare_experimental_setups_n_iterations
 
-SIGNALS_LEN = 5
+SIGNALS_LEN = 6
 
 class KEmoConExperimentNFold(Experiment):
     def __init__(self, logger_obj, n, i, seed=5):

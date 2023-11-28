@@ -1,7 +1,7 @@
 from arpreprocessing.kemocon import KEmoCon
 from experiment.experiment import Experiment, prepare_experimental_setups_n_iterations, n_fold_split
 
-SIGNALS_LEN = 5
+SIGNALS_LEN = 6
 
 
 class KEmoConExperimentNFold(Experiment):

@@ -18,7 +18,7 @@ def datasets_metrics():
         setups = [f"it_{it:02d}" for it in range(1)]
         add_baseline(dataset, results)
 
-        for architecture in ['fcnM', 'cnnM', 'mlpLstmM', 'resnetM']:
+        for architecture in ['fcnM', 'mlpLstmM', 'resnetM']:
             for eval_i in range(1):
                 results += get_result(architecture, dataset, eval_i, setups)
     return pd.DataFrame(results, columns=["Dataset", "Architecture", "Fold", "Evaluation", "Loss", "Loss (std)", "Accuracy", "Accuracy (std)", "F1", "F1 (std)", "AUC", "AUC (std)", "Duration", "Duration (std)"])
@@ -117,14 +117,14 @@ def count_test_classes_representation():
     for dataset in ["KEmoWork"]:
     # for dataset in ["KEmoWork2"]:
         y_num = []
-        result_path = "./results_tml"
+        result_path = "./results_mtl"
         folder_names = os.listdir(result_path)
         folder_names.sort()
 
         for folder_name in folder_names:
             if folder_name.startswith("KEmoWork_19fold_"):
             # if folder_name.startswith("KEmoWork2_19fold_"):
-                path = os.path.join(result_path, folder_name, "tune_00/cnnM/it_00/predictions.txt")
+                path = os.path.join(result_path, folder_name, "tune_00/fcnM/it_00/predictions.txt")
                 if not os.path.exists(path):
                     continue
                 with open(path, 'r') as f:

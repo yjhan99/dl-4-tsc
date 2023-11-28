@@ -89,31 +89,28 @@ class KEmoWorkSubject(SubjectLabel):
 
     def _restructure_data(self, data):
         self._logger.info("Restructuring data for subject {}".format(self.id))
-        # signals = self.restructure_data(data, self._label_type)
-        signals = self.restructure_data_with_augmentation(data, self._label_type)
+        signals = self.restructure_data(data, self._label_type)
+        # signals = self.restructure_data_with_augmentation(data, self._label_type)
         self._logger.info("Finished restructuring data for subject {}".format(self.id))
 
         return signals
 
     @staticmethod
     def restructure_data(data, label_type):
-        # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
         new_data = {'label': np.array(data['label'][label_type].reshape(1,-1))[0], "signal": {}}
         for sensor in data['signal']:
             print('sensor:', sensor)
+            print(data['signal'][sensor].shape)
             for i in range(len(data['signal'][sensor][0])):
                 signal_name = '_'.join([sensor, str(i)])
                 print(signal_name)
+                print(data['signal'][sensor][0])
                 signal = np.array([x[i] for x in data['signal'][sensor]])
                 new_data["signal"][signal_name] = signal
         return new_data
 
     @staticmethod
     def restructure_data_with_augmentation(data, label_type):
-        # print('before')
-        # print('label', len(data['label'][label_type].reshape(1,-1)[0]))
-        # print('signal', len(data['signal']['TEMP']))
-        # new_data = {'label': np.array(data['label'][label_type]), "signal": {}}
         duplicated_labels = np.tile(data['label'][label_type].reshape(1,-1)[0], 7)
         new_data = {'label': duplicated_labels, "signal": {}}
         for sensor in data['signal']:
@@ -125,9 +122,6 @@ class KEmoWorkSubject(SubjectLabel):
                 data_augmentor = DataAugmentation(signal)
                 signal_augmented = data_augmentor.apply_all_augmentations()
                 new_data["signal"][signal_name] = signal_augmented
-        # print('after')
-        # print('label', len(new_data['label']))
-        # print('signal', len(new_data['signal']['TEMP_0']))
         return new_data
 
     def _filter_all_signals(self, data):

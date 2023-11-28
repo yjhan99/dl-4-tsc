@@ -21,7 +21,7 @@ from sklearn.preprocessing import MinMaxScaler, LabelEncoder
 from scipy.spatial import distance
 
 
-SIGNALS_LEN = 5
+SIGNALS_LEN = 6
 
 
 def get_ndft(sampling):

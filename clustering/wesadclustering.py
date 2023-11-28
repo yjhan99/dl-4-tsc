@@ -145,7 +145,7 @@ def n_fold_split_cluster_trait_experiment(subject_ids, n, dataset_name, seed=5):
         X_test_scaled = pd.DataFrame(scaler.transform(X_test.iloc[:,1:]))
         X_rest_scaled = pd.DataFrame(scaler.transform(X_rest.iloc[:,1:]))
 
-        k_value = 2
+        k_value = 5
         clusterer = KMeans(n_clusters=k_value, init='k-means++', n_init='auto', random_state=42)
         cluster_labels = clusterer.fit_predict(X_rest_scaled)
         X_rest_scaled['cluster'] = list(cluster_labels)
@@ -274,3 +274,79 @@ def n_fold_split_cluster_trait_mtl(subject_ids, n, dataset_name, seed=5):
 
     random.seed()
     return result
+
+
+def n_fold_split_cluster_trait_ml(subject_ids, n, dataset_name, seed=5):
+    result = []
+
+    random.seed(seed)
+
+    subject_ids = list(subject_ids)
+    gender_info = list()
+    age_info = list()
+
+    path = "archives/{}".format(dataset_name)
+
+    for subject_id in subject_ids:
+        with open("{0}/S{1}/S{1}_readme.txt".format(path,subject_id)) as f:
+            for line in f:
+                words = line.split()
+                if len(words) > 0 and words[0].lower() == 'gender:':
+                    gender_info.append(words[1])
+                elif len(words) > 0 and words[0].lower() == 'age:':
+                    age_info.append(words[1])
+
+    X = pd.DataFrame()
+    X['pnum'] = subject_ids
+    X['gender'] = gender_info
+    X['age'] = age_info
+
+    label_encoder = LabelEncoder()
+    X['gender'] = label_encoder.fit_transform(X['gender'])
+    X['age'] = label_encoder.fit_transform(X['age'])
+
+    test_sets = [subject_ids[i::n] for i in range(n)]
+
+    X_save_cols = X['pnum'].values.tolist()
+    X_save_cols.append('test_subject')
+
+    X_save = pd.DataFrame(columns=X_save_cols)
+
+    for test_subject in test_sets:
+        X_test = X.loc[X['pnum']==test_subject[0]]
+        X_rest = X.loc[X['pnum']!=test_subject[0]]
+
+        scaler = MinMaxScaler()
+        scaler.fit(X_rest.iloc[:,1:])
+        X_test_scaled = pd.DataFrame(scaler.transform(X_test.iloc[:,1:]))
+        X_rest_scaled = pd.DataFrame(scaler.transform(X_rest.iloc[:,1:]))
+
+        silhouette_scores = []
+        possible_K_values = [i for i in range(2,6)]
+
+        for each_value in possible_K_values:
+            clusterer = KMeans(n_clusters=each_value, init='k-means++', n_init='auto', random_state=42)
+            cluster_labels = clusterer.fit_predict(X_rest_scaled)
+            silhouette_scores.append(silhouette_score(X_rest_scaled, cluster_labels))
+
+        k_value = silhouette_scores.index(min(silhouette_scores))
+        clusterer = KMeans(n_clusters=possible_K_values[k_value], init='k-means++', n_init='auto', random_state=42)
+        cluster_labels = clusterer.fit_predict(X_rest_scaled)
+        X_rest_scaled['cluster'] = list(cluster_labels)
+        X_rest_scaled['pnum'] = X_rest['pnum'].values.tolist()
+
+        test_cluster = clusterer.predict(X_test_scaled)
+
+        for idx, row in X.iterrows():
+            if row['pnum'] == test_subject[0]:
+                X.at[idx, 'cluster'] = test_cluster
+            else:
+                subject_cluster = X_rest_scaled.loc[X_rest_scaled['pnum'] == row['pnum']]['cluster'].item()
+                X.at[idx, 'cluster'] = subject_cluster
+
+        temp_X_save = X['cluster'].values.tolist()
+        temp_X_save.append(test_subject[0])
+        X_save.loc[len(X_save)] = temp_X_save
+
+    X_save.to_csv(f'./cluster_by_test_subject/{dataset_name}_cluster_by_test_subject.csv', index=False)
+    os._exit(0)

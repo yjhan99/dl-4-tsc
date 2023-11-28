@@ -1,26 +1,14 @@
-# Added by yjhan
-MTL
-Dataset
+# Added by yjhan (results files)
+archives
+cluster_by_test_subject
 results
 csvresults
 results_cluster
-results_test
 results_tuning
-results_cluster_tuning
-results_augmented
 results_mtl
-encodedresults
-encodedresults_old
-encoderloss
-encodervalloss
 *.csv
-*.eps
-*.png
-*.p
-*.pkl
 *.DS_Store
 *.ipynb
-archives/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

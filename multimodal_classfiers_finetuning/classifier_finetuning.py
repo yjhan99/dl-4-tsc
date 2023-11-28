@@ -129,13 +129,14 @@ class Classifier(ABC):
 
         for layer in self.model.layers[:-1]:
             layer.trainable = False
+            # layer.trainable = True
         self.model.layers[-1].trainable = True
 
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
 
-        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(7, y_true, y_test_tuning, x_test)
+        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(14, y_true, y_test_tuning, x_test)
 
-        x_train_tuning, x_val_tuning, y_train_tuning, _, y_val_tuning, _ = select_data(5, selected_y_list, selected_y_array, selected_x)
+        x_train_tuning, x_val_tuning, y_train_tuning, _, y_val_tuning, _ = select_data(10, selected_y_list, selected_y_array, selected_x)
 
         # mini_batch_size = int(min(x_train_tuning[0].shape[0] / 10, batch_size))
         mini_batch_size=2
