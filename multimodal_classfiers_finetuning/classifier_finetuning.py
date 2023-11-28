@@ -9,14 +9,13 @@ from keras.optimizers.legacy import Adam
 
 from multimodal_classfiers.hyperparameters import Hyperparameters
 from utils.loggerwrapper import GLOBAL_LOGGER
-from utils.utils import save_logs
+from utils.utils import save_logs, save_logs_without_val
 
 import random, os
 from collections import defaultdict
 
 
 def select_data(samples_per_label, y_list, y_array, x): # samples_per_label = Number of samples to pick from each label
-    # Create a dictionary to store indices for each label in y
     indices_by_label = defaultdict(list)
     for i, label in enumerate(y_list):
         indices_by_label[label].append(i)
@@ -86,19 +85,6 @@ class Classifier(ABC):
         early_stopping = EarlyStopping(patience=15)
         self.callbacks.append(early_stopping)
 
-    def create_callbacks_tuning(self):
-        file_path = self.output_tuning_directory + 'best_model.hdf5'
-        model_checkpoint = ModelCheckpoint(filepath=file_path, monitor='val_loss', save_best_only=True,
-                                           save_weights_only=True)
-        self.callbacks_tuning.append(model_checkpoint)
-
-        # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=self.hyperparameters.reduce_lr_factor,
-        #                               patience=self.hyperparameters.reduce_lr_patience)
-        # self.callbacks.append(reduce_lr)
-
-        early_stopping = EarlyStopping(patience=15)
-        self.callbacks.append(early_stopping)
-
     def get_optimizer(self):
         return Adam(lr=self.hyperparameters.lr, decay=self.hyperparameters.decay)
 
@@ -122,7 +108,6 @@ class Classifier(ABC):
 
         save_logs(self.output_directory, hist, y_pred, y_pred_probabilities, y_true, duration)
 
-        # Fine tuning starts here
         GLOBAL_LOGGER.info("Fine tuning")
 
         start_time = time.time()
@@ -134,30 +119,25 @@ class Classifier(ABC):
 
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
 
-        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(14, y_true, y_test_tuning, x_test)
-
-        x_train_tuning, x_val_tuning, y_train_tuning, _, y_val_tuning, _ = select_data(10, selected_y_list, selected_y_array, selected_x)
+        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(4, y_true, y_test_tuning, x_test)
 
         # mini_batch_size = int(min(x_train_tuning[0].shape[0] / 10, batch_size))
         mini_batch_size=2
         
-        hist_tune = self.model.fit(x_train_tuning, y_train_tuning, batch_size=mini_batch_size, epochs=nb_epochs+10,
-                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, callbacks=self.callbacks_tuning,
-                                   validation_data=(x_val_tuning, y_val_tuning), shuffle=shuffle)
+        hist_tune = self.model.fit(selected_x, selected_y_array, batch_size=mini_batch_size, epochs=nb_epochs+10,
+                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, shuffle=shuffle)
         
         duration = time.time() - start_time
 
         self.model.summary()
         
-        GLOBAL_LOGGER.info(f"Loading weights and predicting")
+        GLOBAL_LOGGER.info(f"Predicting")
         
-        self.model.load_weights(self.output_tuning_directory + 'best_model.hdf5')
-
         y_pred_probabilities = self.model.predict(leftover_x)
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
-        return save_logs(self.output_tuning_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
+        return save_logs_without_val(self.output_tuning_directory, hist_tune, y_pred, y_pred_probabilities, leftover_y_list, duration)
 
 
 def get_multipliers(channels_no, hyperparameters: Hyperparameters):
