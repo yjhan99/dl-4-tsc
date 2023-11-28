@@ -204,6 +204,19 @@ def save_logs(output_directory, hist, y_pred, y_pred_probabilities, y_true, dura
     return df_metrics
 
 
+def save_logs_without_val(output_directory, hist, y_pred, y_pred_probabilities, y_true, duration, lr=True, y_true_val=None,
+              y_pred_val=None):
+    hist_df = pd.DataFrame(hist.history)
+    hist_df.to_csv(output_directory + 'history.csv', index=False)
+
+    df_metrics = calculate_metrics(y_true, y_pred, y_pred_probabilities, duration, y_true_val, y_pred_val)
+    df_metrics.to_csv(output_directory + 'df_metrics.csv', index=False)
+
+    save_predictions(y_true, y_pred, y_pred_probabilities, f"{output_directory}predictions.txt")
+
+    return df_metrics
+
+
 def plot_predictions(y_pred, y_true, filename):
     fig, ax = plt.subplots()
     t = list(range(len(y_pred)))
