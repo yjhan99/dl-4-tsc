@@ -319,9 +319,13 @@ def compute_performance(y_pred, y_true):    # logits, labels
     # Calculate accuracy
     accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
 
+    # Convert tensors to NumPy arrays for classification_report
+    true_classes_np = true_classes.numpy()
+    predicted_classes_np = predicted_classes.numpy()
+
     # Calculate precision, recall, and F1-score
     report = classification_report(
-        true_classes.numpy(), predicted_classes.numpy(), target_names=['Class 0', 'Class 1'], output_dict=True
+        true_classes_np, predicted_classes_np, target_names=['Class 0', 'Class 1'], output_dict=True
     )
 
     return {
