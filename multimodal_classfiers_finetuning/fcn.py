@@ -1,6 +1,5 @@
 import keras
 
-# from multimodal_classfiers.classifier import get_multipliers, Classifier
 from multimodal_classfiers_finetuning.classifier_finetuning import get_multipliers, Classifier
 
 

@@ -66,7 +66,6 @@ class Classifier(ABC):
         if verbose:
             self.model.summary()
         self.create_callbacks()
-        self.create_callbacks_tuning()
 
     @abstractmethod
     def build_model(self, input_shapes, nb_classes, hyperparameters):
@@ -113,13 +112,13 @@ class Classifier(ABC):
         start_time = time.time()
 
         for layer in self.model.layers[:-1]:
-            layer.trainable = False
-            # layer.trainable = True
+            # layer.trainable = False
+            layer.trainable = True
         self.model.layers[-1].trainable = True
 
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
 
-        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(4, y_true, y_test_tuning, x_test)
+        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(15, y_true, y_test_tuning, x_test)
 
         # mini_batch_size = int(min(x_train_tuning[0].shape[0] / 10, batch_size))
         mini_batch_size=2
