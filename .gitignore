@@ -6,6 +6,7 @@ csvresults
 results_cluster
 results_tuning
 results_mtl
+*h5
 *.csv
 *.DS_Store
 *.ipynb

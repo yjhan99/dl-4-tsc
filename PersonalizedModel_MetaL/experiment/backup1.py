@@ -27,10 +27,10 @@ from tqdm import tqdm
 SIGNALS_LEN = 14
 SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
 
-EPOCH = 2
+EPOCH = 100
 PATIENCE = 5
-UPDATE_STEP_TRAIN = 5
-UPDATE_STEP_TEST = 10
+UPDATE_STEP_TRAIN = 10
+UPDATE_STEP_TEST = 20
 K = 20
 
 
@@ -184,24 +184,80 @@ def split_data(user_data, user_label, split_ratio):
         
     for idx, x_test_i in enumerate(label_0_data):
         num_total = x_test_i.shape[0]
-        # random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        # temp_support_data = np.array(x_test_i[random_indices,:,:])
-        temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+        random_indices = np.random.choice(num_total, num_support_0, replace=False)
+        temp_support_data = np.array(x_test_i[random_indices,:,:])
+        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
         support_data.append(temp_support_data)
 
-        random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+
+        # random_indices = np.random.choice(num_total, num_support_0, replace=False)
+        temp_query_data = np.array(x_test_i[non_support_indices,:,:])
+        # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
         query_data.append(temp_query_data)
     
     for idx, x_test_i in enumerate(label_1_data):
         num_total = x_test_i.shape[0]
+        random_indices = np.random.choice(num_total, num_support_0, replace=False)
+        temp_support_data = np.array(x_test_i[random_indices,:,:])
+        # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+        support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
+
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+
         # random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        # temp_support_data = np.array(x_test_i[random_indices,:,:])
+        temp_query_data = np.array(x_test_i[non_support_indices,:,:])
+        # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+        query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
+    
+    for _ in range(num_support_0):
+        support_label.append(0)
+    for _ in range(num_support_1):
+        support_label.append(1)
+
+    for _ in range(num_query_0):
+        query_label.append(0)
+    for _ in range(num_query_1):
+        query_label.append(1)
+    
+    return support_data, support_label, query_data, query_label
+
+def split_data_old(user_data, user_label, split_ratio):
+    indices_by_label = defaultdict(list)
+    for i, label in enumerate(user_label):
+        indices_by_label[label].append(i)
+
+    samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
+    num_query_0 = int(samples_per_label * split_ratio)
+    num_query_1 = int(samples_per_label * split_ratio)
+    num_support_0 = len(indices_by_label[0]) - num_query_0
+    num_support_1 = len(indices_by_label[1]) - num_query_1
+
+    label_0_data = []
+    label_1_data = []
+
+    support_data = []
+    support_label = []
+    query_data = []
+    query_label = []
+
+    for idx, x_test_i in enumerate(user_data):
+        temp_label_0_data = np.array(x_test_i[indices_by_label[0],:,:])
+        label_0_data.append(temp_label_0_data)
+        temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
+        label_1_data.append(temp_label_1_data)
+        
+    for idx, x_test_i in enumerate(label_0_data):
+        temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+        support_data.append(temp_support_data)
+
+        temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+        query_data.append(temp_query_data)
+    
+    for idx, x_test_i in enumerate(label_1_data):
         temp_support_data = np.array(x_test_i[:num_support_1,:,:])
         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
 
-        # random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        # temp_query_data = np.array(x_test_i[random_indices,:,:])
         temp_query_data = np.array(x_test_i[num_support_1:,:,:])
         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
     
@@ -217,74 +273,7 @@ def split_data(user_data, user_label, split_ratio):
     
     return support_data, support_label, query_data, query_label
 
-def split_data(user_data, user_label, seed):
-    indices_by_label = defaultdict(list)
-    for i, label in enumerate(user_label):
-        indices_by_label[label].append(i)
-
-    samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
-    # num_query_0 = int(samples_per_label * split_ratio)
-    # num_query_1 = int(samples_per_label * split_ratio)
-    # num_support_0 = len(indices_by_label[0]) - num_query_0
-    # num_support_1 = len(indices_by_label[1]) - num_query_1
-    num_support_0, num_support_1, num_query_0, num_query_1 = K, K, K, K
-
-    label_0_data = []
-    label_1_data = []
-
-    support_data = []
-    support_label = []
-    query_data = []
-    query_label = []
-
-    for idx, x_test_i in enumerate(user_data):
-        temp_label_0_data = np.array(x_test_i[indices_by_label[0],:,:])
-        label_0_data.append(temp_label_0_data)
-        temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
-        label_1_data.append(temp_label_1_data)
-
-    np.random.seed(seed)    
-    
-    for idx, x_test_i in enumerate(label_0_data):
-        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
-        num_total = x_test_i.shape[0]
-        random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_support_data = np.array(x_test_i[random_indices,:,:])
-        support_data.append(temp_support_data)
-
-        # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
-        temp_query_data = np.array(x_test_i[random_indices,:,:])
-
-        query_data.append(temp_query_data)
-    
-    for idx, x_test_i in enumerate(label_1_data):
-        # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
-        num_total = x_test_i.shape[0]
-        random_indices = np.random.choice(num_total, num_support_1, replace=False)
-        temp_support_data = np.array(x_test_i[random_indices,:,:])
-        support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
-
-        # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
-        temp_query_data = np.array(x_test_i[random_indices,:,:])
-        query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
-    
-    for _ in range(num_support_0):
-        support_label.append(0)
-    for _ in range(num_support_1):
-        support_label.append(1)
-
-    for _ in range(num_query_0):
-        query_label.append(0)
-    for _ in range(num_query_1):
-        query_label.append(1)
-    
-    return support_data, support_label, query_data, query_label
-
-def split_test_data(test_data, test_label):
+def split_test_data(test_data, test_label, split_ratio):
     indices_by_label = defaultdict(list)
     for i, label in enumerate(test_label):
         indices_by_label[label].append(i)
@@ -376,7 +365,7 @@ class MAML:
     def __init__(self, input_shapes, num_classes, architecture):
         self.architecture = architecture
         # self.optimizer = optimizers.Adam(learning_rate=0.03, weight_decay=1e-6)
-        self.optimizer = optimizers.legacy.Adam(learning_rate=0.03, decay=1e-6)
+        self.optimizer = optimizers.legacy.Adam(learning_rate=0.3, decay=1e-6)
         # self.meta_optimizer = optimizers.Adam(learning_rate=0.003, weight_decay=1e-6)
         self.meta_optimizer = optimizers.legacy.Adam(learning_rate=0.003, decay=1e-6)
         self.model = self.create_model(input_shapes, num_classes)
@@ -396,12 +385,12 @@ class MAML:
         for var, initial_var in zip(self.model.trainable_variables, self.initial_state):
             var.assign(initial_var)
 
-def compute_loss(logits, labels):
-    one_hot_labels = tf.keras.utils.to_categorical(labels, num_classes=None)
-    cce = tf.keras.losses.CategoricalCrossentropy()
-    loss = cce(one_hot_labels, logits)
-    # print('loss', loss.numpy())
-    return loss
+# def compute_loss(logits, labels):
+#     one_hot_labels = tf.keras.utils.to_categorical(labels, num_classes=None)
+#     cce = tf.keras.losses.CategoricalCrossentropy()
+#     loss = cce(one_hot_labels, logits)
+#     # print('loss', loss.numpy())
+#     return loss
 
 def compute_accuracy(logits, labels):
     probabilities = tf.nn.softmax(logits, axis=-1)
@@ -457,6 +446,57 @@ def compute_performance(y_pred, y_true):
     return f1_score, auroc
 
 
+
+import tensorflow.keras.backend as keras_backend
+
+def loss_function(pred_y, y):
+  pred_y = tf.keras.utils.to_categorical(pred_y, num_classes=None)
+  loss_fn = keras.losses.CategoricalCrossentropy()
+  loss = loss_fn(y, pred_y)
+#   return keras_backend.mean(keras.losses.CategoricalCrossentropy(y, pred_y))
+  return loss
+
+def np_to_tensor(list_of_numpy_objs):
+    # return (tf.convert_to_tensor(obj) for obj in list_of_numpy_objs)
+    return [tf.convert_to_tensor(obj) for obj in list_of_numpy_objs]
+    
+
+def compute_loss(model, x, y, loss_fn=loss_function):
+    # logits = model.forward(x)
+    logits = model.call(x)
+    mse = loss_fn(y, logits)
+    return mse, logits
+
+
+def compute_gradients(model, x, y, loss_fn=loss_function):
+    with tf.GradientTape() as tape:
+        loss, _ = compute_loss(model, x, y, loss_fn)
+    return tape.gradient(loss, model.trainable_variables), loss
+
+
+def apply_gradients(optimizer, gradients, variables):
+    optimizer.apply_gradients(zip(gradients, variables))
+
+    
+def train_batch(x, y, model, optimizer):
+    tensor_x, tensor_y = np_to_tensor((x, y))
+    gradients, loss = compute_gradients(model, tensor_x, tensor_y)
+    apply_gradients(optimizer, gradients, model.trainable_variables)
+    return loss
+
+def copy_model(model, x, input_shapes, num_classes, architecture):
+    maml = MAML(input_shapes, num_classes, architecture)
+    copied_model = maml.model
+    
+    # If we don't run this step the weights are not "initialized"
+    # and the gradients will not be computed.
+    # copied_model.forward(tf.convert_to_tensor(x))
+    copied_model.call(x)
+    
+    copied_model.set_weights(model.get_weights())
+    return copied_model
+
+
 def main():
     for iter_num in range(3):
         results = []
@@ -484,6 +524,8 @@ def main():
                 num_classes = 2
 
                 maml = MAML(input_shapes, num_classes, architecture)
+                model = maml.model
+                optimizer = maml.meta_optimizer
                 
                 # val_losses = []
                 best_metric = float('inf')
@@ -491,161 +533,162 @@ def main():
 
                 # Train
                 for epoch in range(EPOCH):
-                    
-                    query_losses = [[] for _ in range(UPDATE_STEP_TRAIN)]
-                    # query_losses = []
+                    total_loss = 0
+                    losses = []
 
-                    model = maml.model
-                    maml.save_initial_state() #theta
+                    for idx, user_id in enumerate(meta_batch_x_train.keys()): 
+                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], split_ratio=0.05)
 
-                    # for user_id in tqdm(meta_batch_x_train.keys(), disable=True):  
-                    for seed, user_id in enumerate(meta_batch_x_train.keys()):  
+                        support_data = np_to_tensor(support_data) 
+                        support_label = np_to_tensor(support_label) 
+                        query_data = np_to_tensor(query_data) 
+                        query_label = np_to_tensor(query_label) 
+                        model.call(support_data)
 
-                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], seed)
+                        with tf.GradientTape() as test_tape:
 
-                        if architecture == 'mlplstm':
-                            support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
-                            query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
+                            with tf.GradientTape() as train_tape:
+                                train_loss, _ = compute_loss(model, support_data, support_label)
+                            gradients = train_tape.gradient(train_loss, model.trainable_variables)
+                            # print(train_loss)
+                            step = 0
+                            lr_inner = 0.3
+                            model_copy = copy_model(model, support_data, input_shapes, num_classes, architecture)
+                                        
+                            for j, layer in enumerate(model_copy.layers):
+                                if hasattr(layer, 'kernel'):
+                                    updated_kernel = tf.subtract(model.layers[j].kernel,
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.kernel.assign(updated_kernel)
+                                    if hasattr(layer, 'bias'):
+                                        updated_bias = tf.subtract(model.layers[j].bias,
+                                                                tf.multiply(lr_inner, gradients[step+1]))
+                                        layer.bias.assign(updated_bias)
+                                        step += 2
+                                elif isinstance(layer, keras.layers.BatchNormalization):
+                                    gamma, beta = layer.trainable_variables
+                                    updated_gamma = tf.subtract(gamma, 
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.gamma.assign(updated_gamma)
+                                    step += 1
 
-                        # Meta-batch construction
-                        for step in tqdm(range(UPDATE_STEP_TRAIN), disable=True):
+                                    updated_beta = tf.subtract(beta, 
+                                                            tf.multiply(lr_inner, gradients[step]))
+                                    layer.beta.assign(updated_beta)
+                                    step += 1
+                            test_loss, logits = compute_loss(model_copy, query_data, query_label)
+                            # print(test_loss)
 
-                            with tf.GradientTape() as inner_tape:
-                                support_logits = model(support_data)
-                                support_loss = compute_loss(support_logits, support_label)
-                                                    
-                            gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                            maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                        gradients = test_tape.gradient(test_loss, model.trainable_variables)
+                        optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+                        total_loss += test_loss
+                        loss = total_loss / (idx+1.0)
+                        losses.append(loss)
+
+                        # if epoch % 10 == 0:
+                        print('Step {}: loss = {}'.format(idx, loss))
+
+                #     for user_id in tqdm(meta_batch_x_val.keys(), disable=True):
+                #         support_data, support_label, query_data, query_label = split_data(meta_batch_x_val[user_id], meta_batch_y_val[user_id], split_ratio=0.05)
+
+                #         if architecture == 'mlplstm':
+                #             support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
+                #             query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
+
+                #         for step in tqdm(range(UPDATE_STEP_TEST), disable=True):
+                #             # Split test data into support and query sets
                             
-                            with tf.GradientTape() as outer_tape:
-                                query_logits = model(query_data)
-                                query_loss = compute_loss(query_logits, query_label)
-                            print('query loss:', query_loss.numpy())
-                            query_losses[step].append(query_loss)
-                            # query_losses.append(query_loss)
+                #             # Meta-testing
+                #             with tf.GradientTape(persistent=True) as inner_tape:
+                #                 # support_logits = model(support_data)
+                #                 support_logits = new_model(support_data)
+                #                 support_loss = compute_loss(support_logits, support_label)
 
-                    print(query_losses[-1])
-                    query_loss = query_losses[-1]
-                    # query_losses = query_losses[-1]
-                    # query_loss = [tf.reduce_sum(query_losses[j]) / tf.cast(len(meta_train_set), dtype=tf.float32) for j in range(UPDATE_STEP_TRAIN)]
-                    # print(query_loss)
+                #             # Adapt model parameters based on support set
+                #             # gradients = inner_tape.gradient(support_loss, model.trainable_variables)
+                #             gradients = inner_tape.gradient(support_loss, new_model.trainable_variables)
+                #             # optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                #             # maml.meta_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                #             new_maml.optimizer.apply_gradients(zip(gradients, new_model.trainable_variables))
+                #             # maml.meta_optimizer.minimize(lambda: compute_loss(model(support_data), support_label), var_list=model.trainable_variables)
 
-                    # print('Train query loss', query_loss)
-                    # stacked_query_loss = tf.stack(query_loss, axis=0)
-                    # mean_query_loss = tf.reduce_mean(stacked_query_loss, axis=0)
-                    # print('mean_query_loss', mean_query_loss)
+                #         query_logits = new_model(query_data)
+                #         query_loss = compute_loss(query_logits, query_label)
+                #         query_accuracy = compute_accuracy(query_logits, query_label)
+                #         f1_score, auroc = compute_performance_val(query_logits, query_label)
 
-                    maml.reset_to_initial_state()
+                #         print(f"Meta-Val for User #{user_id} Done")
+                #         print('Val query loss:', query_loss.numpy(), 'Accuracy:', query_accuracy, 'F1 score:', f1_score, 'AUC:', auroc)
+                #         temp_val_losses.append(query_loss.numpy())
 
-                    # Compute gradients for the meta-parameters
-                    meta_gradients = outer_tape.gradient(query_loss, model.trainable_variables)
+                #     # val_losses.append(np.mean(temp_val_losses))
+                #     current_metric = np.mean(temp_val_losses)
 
-                    # Apply meta-optimization step
-                    # optimizer.apply_gradients(zip(meta_gradients, model.trainable_variables))
-                    maml.meta_optimizer.apply_gradients(zip(meta_gradients, model.trainable_variables))
+                #     if current_metric < best_metric:
+                #         best_metric = current_metric
+                #         epochs_without_improvement = 0
+                #     else:
+                #         epochs_without_improvement += 1
 
-                    # model = deepcopy(model)
-                    model.save_weights(f'../model_save/{epoch}_trained_weights.h5')
+                #     if epochs_without_improvement > PATIENCE:
+                #         print(f"Stopping early at epoch {epoch}")
+                #         stop_epoch = epoch
+                #         break
 
-                    new_maml = MAML(input_shapes, num_classes, architecture)
-                    new_model = new_maml.model
-                    new_model.load_weights(f'../model_save/{epoch}_trained_weights.h5')
-                    temp_val_losses = []
-                    # maml.meta_optimizer.build(model.trainable_variables)
-
-                    # for user_id in tqdm(meta_batch_x_val.keys(), disable=True):
-                    for seed, user_id in enumerate(meta_batch_x_val.keys()):
-                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_val[user_id], meta_batch_y_val[user_id], seed)
-
-                        if architecture == 'mlplstm':
-                            support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
-                            query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
-
-                        for step in tqdm(range(UPDATE_STEP_TEST), disable=True):
-                            # Split test data into support and query sets
-                            
-                            # Meta-testing
-                            with tf.GradientTape(persistent=True) as inner_tape:
-                                # support_logits = model(support_data)
-                                support_logits = new_model(support_data)
-                                support_loss = compute_loss(support_logits, support_label)
-
-                            # Adapt model parameters based on support set
-                            # gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                            gradients = inner_tape.gradient(support_loss, new_model.trainable_variables)
-                            # optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                            # maml.meta_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                            new_maml.optimizer.apply_gradients(zip(gradients, new_model.trainable_variables))
-                            # maml.meta_optimizer.minimize(lambda: compute_loss(model(support_data), support_label), var_list=model.trainable_variables)
-
-                        query_logits = new_model(query_data)
-                        query_loss = compute_loss(query_logits, query_label)
-                        query_accuracy = compute_accuracy(query_logits, query_label)
-                        f1_score, auroc = compute_performance_val(query_logits, query_label)
-
-                        print(f"Meta-Val for User #{user_id} Done")
-                        print('Val query loss:', query_loss.numpy(), 'Accuracy:', query_accuracy, 'F1 score:', f1_score, 'AUC:', auroc)
-                        temp_val_losses.append(query_loss.numpy())
-
-                    # val_losses.append(np.mean(temp_val_losses))
-                    current_metric = np.mean(temp_val_losses)
-
-                    if current_metric < best_metric:
-                        best_metric = current_metric
-                        epochs_without_improvement = 0
-                    else:
-                        epochs_without_improvement += 1
-
-                    if epochs_without_improvement > PATIENCE:
-                        print(f"Stopping early at epoch {epoch}")
-                        stop_epoch = epoch
-                        break
-
-                    # if (epoch > 4):
-                    #     print('Val losses so far', val_losses)
-                    #     val_loss_before = val_losses[-5]
-                    #     val_loss_now = val_losses[-1]
-                    #     if val_loss_now < val_loss_before:
-                    #         continue
-                    #     else:
-                    #         break
+                #     # if (epoch > 4):
+                #     #     print('Val losses so far', val_losses)
+                #     #     val_loss_before = val_losses[-5]
+                #     #     val_loss_now = val_losses[-1]
+                #     #     if val_loss_now < val_loss_before:
+                #     #         continue
+                #     #     else:
+                #     #         break
                     
                 # Test
-                # model.load_weights(f'../model_save/{stop_epoch}_trained_weights.h5')
-                stop_epoch = epoch
-                test_maml = MAML(input_shapes, num_classes, architecture)
-                test_model = test_maml.model
-                test_model.load_weights(f'../model_save/{stop_epoch}_trained_weights.h5')
-
                 for user_id, values in x_test.items():
                     test_data, test_label = load_test_data(x_test[user_id], y_test[user_id])
 
-                    for step in tqdm(range(UPDATE_STEP_TEST)):
-                        # Split test data into support and query sets
-                        # support_data, support_label, query_data, query_label = split_test_data(test_data, test_label, split_ratio=0.05)
-                        support_data, support_label, query_data, query_label = split_test_data(test_data, test_label)
-                        if architecture == 'mlplstm':
-                            support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
-                            query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
-                        
-                        # Meta-testing
-                        with tf.GradientTape(persistent=True) as inner_tape:
-                            # support_logits = model(support_data)
-                            support_logits = test_model(support_data)
-                            support_loss = compute_loss(support_logits, support_label)
-                            print('support loss', support_loss)
+                    support_data, support_label, query_data, query_label = split_test_data(test_data, test_label, split_ratio=0.15)
 
-                        # Adapt model parameters based on support set
-                        # gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                        gradients = inner_tape.gradient(support_loss, test_model.trainable_variables)
-                        # optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                        # maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                        test_maml.optimizer.apply_gradients(zip(gradients, test_model.trainable_variables))
-                        # maml.meta_optimizer.minimize(lambda: compute_loss(model(support_data), support_label), var_list=model.trainable_variables)
+                    support_data = np_to_tensor(support_data) 
+                    support_label = np_to_tensor(support_label) 
+                    query_data = np_to_tensor(query_data) 
+                    query_label = np_to_tensor(query_label) 
+                    model.call(support_data)
 
-                    # Evaluate on query set
-                    query_logits = model(query_data)
-                    query_loss = compute_loss(query_logits, query_label)
+                    with tf.GradientTape() as train_tape:
+                        train_loss, _ = compute_loss(model, support_data, support_label)
+                    gradients = train_tape.gradient(train_loss, model.trainable_variables)
+                    print(train_loss)
+
+                    step = 0
+                    lr_inner = 0.3
+                    model_copy = copy_model(model, support_data, input_shapes, num_classes, architecture)
+                                
+                    for j, layer in enumerate(model_copy.layers):
+                        if hasattr(layer, 'kernel'):
+                            updated_kernel = tf.subtract(model.layers[j].kernel,
+                                                        tf.multiply(lr_inner, gradients[step]))
+                            layer.kernel.assign(updated_kernel)
+                            if hasattr(layer, 'bias'):
+                                updated_bias = tf.subtract(model.layers[j].bias,
+                                                        tf.multiply(lr_inner, gradients[step+1]))
+                                layer.bias.assign(updated_bias)
+                                step += 2
+                        elif isinstance(layer, keras.layers.BatchNormalization):
+                            gamma, beta = layer.trainable_variables
+                            updated_gamma = tf.subtract(gamma, 
+                                                        tf.multiply(lr_inner, gradients[step]))
+                            layer.gamma.assign(updated_gamma)
+                            step += 1
+
+                            updated_beta = tf.subtract(beta, 
+                                                    tf.multiply(lr_inner, gradients[step]))
+                            layer.beta.assign(updated_beta)
+                            step += 1
+                    test_loss, query_logits = compute_loss(model_copy, query_data, query_label)
+
                     query_accuracy = compute_accuracy(query_logits, query_label)
                     f1_score, auroc = compute_performance(query_logits, query_label)
 

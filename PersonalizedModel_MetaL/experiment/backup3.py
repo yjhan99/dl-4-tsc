@@ -9,9 +9,9 @@ import random
 import os
 import itertools as it
 
-from multimodal_classifiers_metal.fcn import FCN
-from multimodal_classifiers_metal.mlp_lstm import MlpLstm
-from multimodal_classifiers_metal.resnet import Resnet
+from multimodal_classifiers_maml.fcn import FCN
+from multimodal_classifiers_maml.mlp_lstm import MlpLstm
+from multimodal_classifiers_maml.resnet import Resnet
 
 from tensorflow import keras
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
@@ -28,9 +28,9 @@ SIGNALS_LEN = 14
 SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
 
 EPOCH = 5
-UPDATE_STEP_TRAIN = 2
+UPDATE_STEP_TRAIN = 20
 UPDATE_STEP_TEST = 10
-K = 5
+LEARNING_RATE = 0.003
 
 
 def load_dataset(logger_obj, channels_ids, test_ids, train_ids, dataset_name, seed=5):
@@ -113,17 +113,16 @@ def split_users(users, test_user):
     
     return meta_train_set, meta_test_set
 
-def split_data(user_data, user_label, seed):
+def split_data(user_data, user_label, split_ratio):
     indices_by_label = defaultdict(list)
     for i, label in enumerate(user_label):
         indices_by_label[label].append(i)
 
     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
-    # num_query_0 = int(samples_per_label * split_ratio)
-    # num_query_1 = int(samples_per_label * split_ratio)
-    # num_support_0 = len(indices_by_label[0]) - num_query_0
-    # num_support_1 = len(indices_by_label[1]) - num_query_1
-    num_support_0, num_support_1, num_query_0, num_query_1 = K, K, K, K
+    num_query_0 = int(samples_per_label * split_ratio)
+    num_query_1 = int(samples_per_label * split_ratio)
+    num_support_0 = len(indices_by_label[0]) - num_query_0
+    num_support_1 = len(indices_by_label[1]) - num_query_1
 
     label_0_data = []
     label_1_data = []
@@ -138,34 +137,19 @@ def split_data(user_data, user_label, seed):
         label_0_data.append(temp_label_0_data)
         temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
         label_1_data.append(temp_label_1_data)
-
-    np.random.seed(seed)    
-    
+        
     for idx, x_test_i in enumerate(label_0_data):
-        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
-        num_total = x_test_i.shape[0]
-        random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_support_data = np.array(x_test_i[random_indices,:,:])
+        temp_support_data = np.array(x_test_i[:num_support_0,:,:])
         support_data.append(temp_support_data)
 
-        # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
-        temp_query_data = np.array(x_test_i[random_indices,:,:])
-
+        temp_query_data = np.array(x_test_i[num_support_0:,:,:])
         query_data.append(temp_query_data)
     
     for idx, x_test_i in enumerate(label_1_data):
-        # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
-        num_total = x_test_i.shape[0]
-        random_indices = np.random.choice(num_total, num_support_1, replace=False)
-        temp_support_data = np.array(x_test_i[random_indices,:,:])
+        temp_support_data = np.array(x_test_i[:num_support_1,:,:])
         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
 
-        # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
-        temp_query_data = np.array(x_test_i[random_indices,:,:])
+        temp_query_data = np.array(x_test_i[num_support_1:,:,:])
         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
     
     for _ in range(num_support_0):
@@ -180,15 +164,14 @@ def split_data(user_data, user_label, seed):
     
     return support_data, support_label, query_data, query_label
 
-def split_test_data(test_data, test_label):
+def split_test_data(test_data, test_label, split_ratio):
     indices_by_label = defaultdict(list)
     for i, label in enumerate(test_label):
         indices_by_label[label].append(i)
 
     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
-    # num_support_0 = int(samples_per_label * split_ratio)
-    # num_support_1 = int(samples_per_label * split_ratio)
-    num_support_0, num_support_1 = K, K
+    num_support_0 = int(samples_per_label * split_ratio)
+    num_support_1 = int(samples_per_label * split_ratio)
     num_query_0 = len(indices_by_label[0]) - num_support_0
     num_query_1 = len(indices_by_label[1]) - num_support_1
 
@@ -232,6 +215,7 @@ def split_test_data(test_data, test_label):
 
     return support_data, support_label, query_data, query_label
 
+
 def load_test_data(original_test_data, original_test_label):
     indices_by_label = defaultdict(list)
     label_0_data = []
@@ -265,13 +249,12 @@ def load_test_data(original_test_data, original_test_label):
         test_label.append(1)
     
     return test_data, test_label
-
         
 class MAML:
     def __init__(self, input_shapes, num_classes, architecture):
         self.architecture = architecture
-        self.optimizer = optimizers.Adam(learning_rate=0.3, weight_decay=1e-6)
-        self.meta_optimizer = optimizers.Adam(learning_rate=0.003, weight_decay=1e-6)
+        self.optimizer = optimizers.Adam(learning_rate=LEARNING_RATE, weight_decay=1e-6)
+        self.meta_optimizer = optimizers.Adam(learning_rate=LEARNING_RATE*0.1, weight_decay=1e-6)
         self.model = self.create_model(input_shapes, num_classes)
 
     def create_model(self, input_shapes, num_classes):
@@ -291,9 +274,18 @@ class MAML:
 
 def compute_loss(logits, labels):
     one_hot_labels = tf.keras.utils.to_categorical(labels, num_classes=None)
-    cce = tf.keras.losses.CategoricalCrossentropy()
+    cce = tf.keras.losses.CategoricalCrossentropy(from_logits=True)
     loss = cce(one_hot_labels, logits)
+    # print('loss', loss.numpy())
     return loss
+
+def compute_accuracy(logits, labels):
+    probabilities = tf.nn.softmax(logits, axis=-1)
+    predicted_classes = tf.argmax(probabilities, axis=-1)
+    correct_predictions = tf.equal(predicted_classes, labels)
+    accuracy = tf.reduce_mean(tf.cast(correct_predictions, tf.float32))
+    accuracy = accuracy.numpy()
+    return accuracy
 
 def compute_performance(y_pred, y_true):
     print(y_pred)
@@ -317,17 +309,8 @@ def compute_performance(y_pred, y_true):
     probs_class_1 = [prob[1] for prob in probabilities]
     auroc = roc_auc_score(true_classes, probs_class_1)
 
-    return accuracy, f1_score, auroc
+    return f1_score, auroc
 
-def copy_model(x, input_shapes, num_classes, architecture):
-    maml = MAML(input_shapes, num_classes, architecture)
-    copied_model = maml.model
-    
-    # If we don't run this step the weights are not "initialized"
-    # and the gradients will not be computed.
-    copied_model.call(x)
-    
-    return copied_model
 
 def main():
     for iter_num in range(3):
@@ -351,80 +334,66 @@ def main():
                 num_classes = 2
 
                 maml = MAML(input_shapes, num_classes, architecture)
-                model = maml.model
-                meta_optimizer = maml.meta_optimizer
                 
                 # Train
                 for epoch in range(EPOCH):
-                    print('Epoch:', epoch)
-
-                    query_losses = [[] for _ in range(UPDATE_STEP_TRAIN)]
+                    print('epoch', epoch)
+                    # query_losses = [[] for _ in range(len(SUBJECTS_IDS)-1)]
+                    # query_losses = []
+                    maml.save_initial_state()
+                    meta_gradients_accumulated = [tf.zeros_like(var) for var in maml.model.trainable_variables]
 
                     for user_id in tqdm(meta_batch_x_train.keys(), disable=True):
-                        print('Task User:', user_id)  
+                    # for idx, user_id in enumerate(meta_batch_x_train):
 
-                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], seed=epoch)
-                        if architecture == 'mlplstm':
+                        print('task generated', user_id)  
+
+                        # Randomly sample a set of tasks, and for each task (user/cluster/random-domain), sample support and query sets based on the ratios defined
+                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], split_ratio=0.85)
+
+                        # Meta-batch construction
+                        for step in tqdm(range(UPDATE_STEP_TRAIN), disable=True):
+                            model = maml.model
+                            # optimizer = maml.optimizer
+                            
+                            if architecture == 'mlplstm':
                                 support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
                                 query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
 
-                        support_data = [tf.convert_to_tensor(obj) for obj in support_data]
-                        support_label = [tf.convert_to_tensor(obj) for obj in support_label]
-                        query_data = [tf.convert_to_tensor(obj) for obj in query_data]
-                        query_label = [tf.convert_to_tensor(obj) for obj in query_label]
-                        
-                        model.call(support_data)
-                        weights = [tf.identity(var) for var in model.trainable_variables]
-
-                        with tf.GradientTape() as inner_tape:
-                            support_logits = model(support_data)
-                            support_loss = compute_loss(support_logits, support_label)
-                                                
-                        gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                        fast_weights = list(map(lambda p: p[1] - 0.3 * p[0], zip(gradients, weights)))
-
-                        model_copy = copy_model(support_data, input_shapes, num_classes, architecture)
-                        for var, new_val in zip(model_copy.trainable_variables, fast_weights):
-                            var.assign(new_val)
-
-                        with tf.GradientTape() as outer_tape:
-                            query_logits = model_copy(query_data)
-                            query_loss = compute_loss(query_logits, query_label)
-                        query_losses[0].append(query_loss)
-
-                        for step in tqdm(range(UPDATE_STEP_TRAIN-1), disable=True):
-
-                            with tf.GradientTape() as inner_tape:
-                                # support_logits = model(support_data)
-                                support_logits = model_copy(support_data)
+                            # Inner loop (support set optimization)
+                            with tf.GradientTape(persistent=True) as inner_tape:
+                                # Forward pass on the support set
+                                support_logits = model(support_data)
                                 support_loss = compute_loss(support_logits, support_label)
                                                     
-                            # gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                            gradients = inner_tape.gradient(support_loss, model_copy.trainable_variables)
-                            fast_weights = list(map(lambda p: p[1] - 0.3 * p[0], zip(gradients, fast_weights)))
+                            # Compute gradients and perform a gradient descent step on the support set
+                            gradients = inner_tape.gradient(support_loss, model.trainable_variables)
+                            maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
-                            # model_copy = copy_model(support_data, input_shapes, num_classes, architecture)
-                            for var, new_val in zip(model_copy.trainable_variables, fast_weights):
-                                var.assign(new_val)
+                            del inner_tape
 
-                            with tf.GradientTape() as outer_tape:
-                                outer_tape.watch(model_copy.trainable_variables)
+                        maml.reset_to_initial_state()
+                            
+                        # Outer loop (meta-parameters optimizatino based on the query set)
+                        with tf.GradientTape() as outer_tape:
+                            # Forward pass on the query set
+                            query_logits = model(query_data)
+                            query_loss = compute_loss(query_logits, query_label)
+                        # if epoch % 10 == 0:
+                        print('query loss', query_loss)
+                        # query_losses.append(query_loss)
 
-                                query_logits = model_copy(query_data)
-                                query_loss = compute_loss(query_logits, query_label)
-                            query_losses[step+1].append(query_loss)
+                        # query_loss = query_losses[-1]
+                        # stacked_query_loss = tf.stack(query_loss, axis=0)
+                        # mean_query_loss = tf.reduce_mean(stacked_query_loss, axis=0)
+                        # print('mean_query_loss', mean_query_loss)
 
-                    total_query_losses = [tf.reduce_sum(query_losses[j]) / tf.cast(len(meta_batch_x_train), dtype=tf.float32) for j in range(UPDATE_STEP_TRAIN)]
-                    print(total_query_losses)
+                        # Compute gradients for the meta-parameters
+                        meta_gradients = outer_tape.gradient(query_loss, model.trainable_variables)
+                        meta_gradients_accumulated = [accumulated_grad + grad for accumulated_grad, grad in zip(meta_gradients_accumulated, meta_gradients)]
 
-                    for var, new_val in zip(model_copy.trainable_variables, weights):
-                        var.assign(new_val)
-
-                    gradients = outer_tape.gradient(total_query_losses[-1], model_copy.trainable_variables)
-                    print(gradients[0])
-                    raise KeyboardInterrupt
-                    # gvs = meta_optimizer.compute_gradients(total_query_losses[-1], var_list = model.trainable_variables, tape = outer_tape)
-                    meta_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                        # Apply meta-optimization step
+                    maml.meta_optimizer.apply_gradients(zip(meta_gradients_accumulated, model.trainable_variables))
                     
                 # Test
                 for user_id, values in x_test.items():
