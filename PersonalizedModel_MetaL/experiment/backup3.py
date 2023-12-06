@@ -9,9 +9,9 @@ import random
 import os
 import itertools as it
 
-from multimodal_classifiers_maml.fcn import FCN
-from multimodal_classifiers_maml.mlp_lstm import MlpLstm
-from multimodal_classifiers_maml.resnet import Resnet
+from multimodal_classifiers_metal.fcn import FCN
+from multimodal_classifiers_metal.mlp_lstm import MlpLstm
+from multimodal_classifiers_metal.resnet import Resnet
 
 from tensorflow import keras
 from sklearn.metrics import classification_report, accuracy_score, roc_auc_score
@@ -27,8 +27,9 @@ from tqdm import tqdm
 SIGNALS_LEN = 14
 SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
 
+K = 5
 EPOCH = 5
-UPDATE_STEP_TRAIN = 20
+UPDATE_STEP_TRAIN = 5
 UPDATE_STEP_TEST = 10
 LEARNING_RATE = 0.003
 
@@ -113,16 +114,17 @@ def split_users(users, test_user):
     
     return meta_train_set, meta_test_set
 
-def split_data(user_data, user_label, split_ratio):
+def split_data(user_data, user_label, seed):
     indices_by_label = defaultdict(list)
     for i, label in enumerate(user_label):
         indices_by_label[label].append(i)
 
     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
-    num_query_0 = int(samples_per_label * split_ratio)
-    num_query_1 = int(samples_per_label * split_ratio)
-    num_support_0 = len(indices_by_label[0]) - num_query_0
-    num_support_1 = len(indices_by_label[1]) - num_query_1
+    # num_query_0 = int(samples_per_label * split_ratio)
+    # num_query_1 = int(samples_per_label * split_ratio)
+    # num_support_0 = len(indices_by_label[0]) - num_query_0
+    # num_support_1 = len(indices_by_label[1]) - num_query_1
+    num_support_0, num_support_1, num_query_0, num_query_1 = K, K, K, K
 
     label_0_data = []
     label_1_data = []
@@ -137,19 +139,34 @@ def split_data(user_data, user_label, split_ratio):
         label_0_data.append(temp_label_0_data)
         temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
         label_1_data.append(temp_label_1_data)
-        
+
+    np.random.seed(seed)    
+    
     for idx, x_test_i in enumerate(label_0_data):
-        temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+        num_total = x_test_i.shape[0]
+        random_indices = np.random.choice(num_total, num_support_0, replace=False)
+        temp_support_data = np.array(x_test_i[random_indices,:,:])
         support_data.append(temp_support_data)
 
-        temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+        # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
+        temp_query_data = np.array(x_test_i[random_indices,:,:])
+
         query_data.append(temp_query_data)
     
     for idx, x_test_i in enumerate(label_1_data):
-        temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+        # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+        num_total = x_test_i.shape[0]
+        random_indices = np.random.choice(num_total, num_support_1, replace=False)
+        temp_support_data = np.array(x_test_i[random_indices,:,:])
         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
 
-        temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+        # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
+        temp_query_data = np.array(x_test_i[random_indices,:,:])
         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
     
     for _ in range(num_support_0):
@@ -163,6 +180,57 @@ def split_data(user_data, user_label, split_ratio):
         query_label.append(1)
     
     return support_data, support_label, query_data, query_label
+
+# def split_data(user_data, user_label, split_ratio):
+#     indices_by_label = defaultdict(list)
+#     for i, label in enumerate(user_label):
+#         indices_by_label[label].append(i)
+
+#     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
+#     num_query_0 = int(samples_per_label * split_ratio)
+#     num_query_1 = int(samples_per_label * split_ratio)
+#     num_support_0 = len(indices_by_label[0]) - num_query_0
+#     num_support_1 = len(indices_by_label[1]) - num_query_1
+
+#     label_0_data = []
+#     label_1_data = []
+
+#     support_data = []
+#     support_label = []
+#     query_data = []
+#     query_label = []
+
+#     for idx, x_test_i in enumerate(user_data):
+#         temp_label_0_data = np.array(x_test_i[indices_by_label[0],:,:])
+#         label_0_data.append(temp_label_0_data)
+#         temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
+#         label_1_data.append(temp_label_1_data)
+        
+#     for idx, x_test_i in enumerate(label_0_data):
+#         temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+#         support_data.append(temp_support_data)
+
+#         temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+#         query_data.append(temp_query_data)
+    
+#     for idx, x_test_i in enumerate(label_1_data):
+#         temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+#         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
+
+#         temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+#         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
+    
+#     for _ in range(num_support_0):
+#         support_label.append(0)
+#     for _ in range(num_support_1):
+#         support_label.append(1)
+
+#     for _ in range(num_query_0):
+#         query_label.append(0)
+#     for _ in range(num_query_1):
+#         query_label.append(1)
+    
+#     return support_data, support_label, query_data, query_label
 
 def split_test_data(test_data, test_label, split_ratio):
     indices_by_label = defaultdict(list)

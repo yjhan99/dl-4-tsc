@@ -153,20 +153,86 @@ def split_val_user(train_users):
     
     return meta_train_set, meta_val_set
 
-def split_data(user_data, user_label, split_ratio):
+# def split_data(user_data, user_label, split_ratio):
+#     indices_by_label = defaultdict(list)
+#     for i, label in enumerate(user_label):
+#         indices_by_label[label].append(i)
+
+#     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
+#     # num_query_0 = int(samples_per_label * split_ratio)
+#     num_support_0 = K
+#     # num_query_1 = int(samples_per_label * split_ratio)
+#     num_support_1 = K
+#     num_query_0 = len(indices_by_label[0]) - num_support_0
+#     # num_support_0 = len(indices_by_label[0]) - num_query_0
+#     # num_support_1 = len(indices_by_label[1]) - num_query_1
+#     num_query_1 = len(indices_by_label[1]) - num_support_1
+
+#     label_0_data = []
+#     label_1_data = []
+
+#     support_data = []
+#     support_label = []
+#     query_data = []
+#     query_label = []
+
+#     for idx, x_test_i in enumerate(user_data):
+#         temp_label_0_data = np.array(x_test_i[indices_by_label[0],:,:])
+#         label_0_data.append(temp_label_0_data)
+#         temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
+#         label_1_data.append(temp_label_1_data)
+        
+#     for idx, x_test_i in enumerate(label_0_data):
+#         num_total = x_test_i.shape[0]
+#         random_indices = np.random.choice(num_total, num_support_0, replace=False)
+#         temp_support_data = np.array(x_test_i[random_indices,:,:])
+#         # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
+#         support_data.append(temp_support_data)
+
+#         non_support_indices = [i for i in range(num_total) if i not in random_indices]
+
+#         # random_indices = np.random.choice(num_total, num_support_0, replace=False)
+#         temp_query_data = np.array(x_test_i[non_support_indices,:,:])
+#         # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+#         query_data.append(temp_query_data)
+    
+#     for idx, x_test_i in enumerate(label_1_data):
+#         num_total = x_test_i.shape[0]
+#         random_indices = np.random.choice(num_total, num_support_0, replace=False)
+#         temp_support_data = np.array(x_test_i[random_indices,:,:])
+#         # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+#         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
+
+#         non_support_indices = [i for i in range(num_total) if i not in random_indices]
+
+#         # random_indices = np.random.choice(num_total, num_support_0, replace=False)
+#         temp_query_data = np.array(x_test_i[non_support_indices,:,:])
+#         # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+#         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
+    
+#     for _ in range(num_support_0):
+#         support_label.append(0)
+#     for _ in range(num_support_1):
+#         support_label.append(1)
+
+#     for _ in range(num_query_0):
+#         query_label.append(0)
+#     for _ in range(num_query_1):
+#         query_label.append(1)
+    
+#     return support_data, support_label, query_data, query_label
+
+def split_data(user_data, user_label, seed):
     indices_by_label = defaultdict(list)
     for i, label in enumerate(user_label):
         indices_by_label[label].append(i)
 
     samples_per_label = min(len(indices_by_label[0]), len(indices_by_label[1]))
     # num_query_0 = int(samples_per_label * split_ratio)
-    num_support_0 = K
     # num_query_1 = int(samples_per_label * split_ratio)
-    num_support_1 = K
-    num_query_0 = len(indices_by_label[0]) - num_support_0
     # num_support_0 = len(indices_by_label[0]) - num_query_0
     # num_support_1 = len(indices_by_label[1]) - num_query_1
-    num_query_1 = len(indices_by_label[1]) - num_support_1
+    num_support_0, num_support_1, num_query_0, num_query_1 = K, K, K, K
 
     label_0_data = []
     label_1_data = []
@@ -181,33 +247,34 @@ def split_data(user_data, user_label, split_ratio):
         label_0_data.append(temp_label_0_data)
         temp_label_1_data = np.array(x_test_i[indices_by_label[1],:,:])
         label_1_data.append(temp_label_1_data)
-        
+
+    np.random.seed(seed)    
+    
     for idx, x_test_i in enumerate(label_0_data):
+        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
         num_total = x_test_i.shape[0]
         random_indices = np.random.choice(num_total, num_support_0, replace=False)
         temp_support_data = np.array(x_test_i[random_indices,:,:])
-        # temp_support_data = np.array(x_test_i[:num_support_0,:,:])
         support_data.append(temp_support_data)
 
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-
-        # random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_query_data = np.array(x_test_i[non_support_indices,:,:])
         # temp_query_data = np.array(x_test_i[num_support_0:,:,:])
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
+        temp_query_data = np.array(x_test_i[random_indices,:,:])
+
         query_data.append(temp_query_data)
     
     for idx, x_test_i in enumerate(label_1_data):
-        num_total = x_test_i.shape[0]
-        random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_support_data = np.array(x_test_i[random_indices,:,:])
         # temp_support_data = np.array(x_test_i[:num_support_1,:,:])
+        num_total = x_test_i.shape[0]
+        random_indices = np.random.choice(num_total, num_support_1, replace=False)
+        temp_support_data = np.array(x_test_i[random_indices,:,:])
         support_data[idx] = np.concatenate((support_data[idx], temp_support_data), axis=0)
 
-        non_support_indices = [i for i in range(num_total) if i not in random_indices]
-
-        # random_indices = np.random.choice(num_total, num_support_0, replace=False)
-        temp_query_data = np.array(x_test_i[non_support_indices,:,:])
         # temp_query_data = np.array(x_test_i[num_support_1:,:,:])
+        non_support_indices = [i for i in range(num_total) if i not in random_indices]
+        random_indices = np.random.choice(non_support_indices, num_query_1, replace=False)
+        temp_query_data = np.array(x_test_i[random_indices,:,:])
         query_data[idx] = np.concatenate((query_data[idx], temp_query_data), axis=0)
     
     for _ in range(num_support_0):
@@ -453,8 +520,8 @@ def loss_function(pred_y, y):
   pred_y = tf.keras.utils.to_categorical(pred_y, num_classes=None)
   loss_fn = keras.losses.CategoricalCrossentropy()
   loss = loss_fn(y, pred_y)
-#   return keras_backend.mean(keras.losses.CategoricalCrossentropy(y, pred_y))
-  return loss
+  return keras_backend.mean(loss)
+#   return loss
 
 def np_to_tensor(list_of_numpy_objs):
     # return (tf.convert_to_tensor(obj) for obj in list_of_numpy_objs)
@@ -536,27 +603,32 @@ def main():
                     total_loss = 0
                     losses = []
 
-                    for idx, user_id in enumerate(meta_batch_x_train.keys()): 
-                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], split_ratio=0.05)
+                    for idx, user_id in enumerate(meta_batch_x_train.keys()):
+
+                        support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], epoch)
 
                         support_data = np_to_tensor(support_data) 
                         support_label = np_to_tensor(support_label) 
                         query_data = np_to_tensor(query_data) 
                         query_label = np_to_tensor(query_label) 
+                        
                         model.call(support_data)
  
                         with tf.GradientTape() as test_tape:
+                            test_tape.watch(model.trainable_variables)
 
                             with tf.GradientTape() as train_tape:
                                 # model.call(support_data)
                                 train_loss, _ = compute_loss(model, support_data, support_label)
                             gradients = train_tape.gradient(train_loss, model.trainable_variables)
-                            # print(train_loss)
+                            print('train', train_loss)
                             step = 0
                             lr_inner = 0.3
                             
-                            model_copy = copy_model(model, support_data, input_shapes, num_classes, architecture)
+                            # model_copy = copy_model(model, support_data, input_shapes, num_classes, architecture)
                             # model_copy = copy_model(model, input_shapes, num_classes, architecture)
+                            maml.save_initial_state()
+                            model_copy = model
                                         
                             for j, layer in enumerate(model_copy.layers):
                                 if hasattr(layer, 'kernel'):
@@ -580,12 +652,11 @@ def main():
                                     layer.beta.assign(updated_beta)
                                     step += 1
                             test_loss, logits = compute_loss(model_copy, query_data, query_label)
-                            # print(test_loss)
+                            print('test', test_loss)
 
+                        maml.reset_to_initial_state()
                         gradients = test_tape.gradient(test_loss, model.trainable_variables)
                         # gradients = test_tape.gradient(test_loss, model_copy.trainable_variables)
-                        print(gradients[0])
-                        raise KeyboardInterrupt
                         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
 
                         total_loss += test_loss

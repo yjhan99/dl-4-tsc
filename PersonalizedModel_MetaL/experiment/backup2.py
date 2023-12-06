@@ -27,7 +27,7 @@ from tqdm import tqdm
 SIGNALS_LEN = 14
 SUBJECTS_IDS = list(it.chain(range(2, 12), range(13, 18)))
 
-EPOCH = 2
+EPOCH = 10
 PATIENCE = 5
 UPDATE_STEP_TRAIN = 5
 UPDATE_STEP_TEST = 10
@@ -456,6 +456,9 @@ def compute_performance(y_pred, y_true):
 
     return f1_score, auroc
 
+def np_to_tensor(list_of_numpy_objs):
+    # return (tf.convert_to_tensor(obj) for obj in list_of_numpy_objs)
+    return [tf.convert_to_tensor(obj) for obj in list_of_numpy_objs]
 
 def main():
     for iter_num in range(3):
@@ -503,25 +506,53 @@ def main():
 
                         support_data, support_label, query_data, query_label = split_data(meta_batch_x_train[user_id], meta_batch_y_train[user_id], seed)
 
+                        support_data = np_to_tensor(support_data) 
+                        support_label = np_to_tensor(support_label) 
+                        query_data = np_to_tensor(query_data) 
+                        query_label = np_to_tensor(query_label)
+
                         if architecture == 'mlplstm':
                             support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
                             query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
 
                         # Meta-batch construction
-                        for step in tqdm(range(UPDATE_STEP_TRAIN), disable=True):
+                        for update_step in tqdm(range(UPDATE_STEP_TRAIN), disable=True):
 
                             with tf.GradientTape() as inner_tape:
                                 support_logits = model(support_data)
                                 support_loss = compute_loss(support_logits, support_label)
                                                     
                             gradients = inner_tape.gradient(support_loss, model.trainable_variables)
-                            maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+                            # maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+
+                            lr_inner = 0.3
+                            step = 0
+                            for j, layer in enumerate(model.layers):
+                                if hasattr(layer, 'kernel'):
+                                    updated_kernel = tf.subtract(model.layers[j].kernel,
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.kernel.assign(updated_kernel)
+                                    if hasattr(layer, 'bias'):
+                                        updated_bias = tf.subtract(model.layers[j].bias,
+                                                                tf.multiply(lr_inner, gradients[step+1]))
+                                        layer.bias.assign(updated_bias)
+                                        step += 2
+                                elif isinstance(layer, keras.layers.BatchNormalization):
+                                    gamma, beta = layer.trainable_variables
+                                    updated_gamma = tf.subtract(gamma, 
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.gamma.assign(updated_gamma)
+                                    step += 1
+
+                                    updated_beta = tf.subtract(beta, 
+                                                            tf.multiply(lr_inner, gradients[step]))
+                                    layer.beta.assign(updated_beta)
+                                    step += 1
                             
                             with tf.GradientTape() as outer_tape:
                                 query_logits = model(query_data)
                                 query_loss = compute_loss(query_logits, query_label)
-                            print('query loss:', query_loss.numpy())
-                            query_losses[step].append(query_loss)
+                            query_losses[update_step].append(query_loss)
                             # query_losses.append(query_loss)
 
                     print(query_losses[-1])
@@ -561,6 +592,11 @@ def main():
                             support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
                             query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
 
+                        support_data = np_to_tensor(support_data) 
+                        support_label = np_to_tensor(support_label) 
+                        query_data = np_to_tensor(query_data) 
+                        query_label = np_to_tensor(query_label)
+
                         for step in tqdm(range(UPDATE_STEP_TEST), disable=True):
                             # Split test data into support and query sets
                             
@@ -575,8 +611,30 @@ def main():
                             gradients = inner_tape.gradient(support_loss, new_model.trainable_variables)
                             # optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                             # maml.meta_optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                            new_maml.optimizer.apply_gradients(zip(gradients, new_model.trainable_variables))
-                            # maml.meta_optimizer.minimize(lambda: compute_loss(model(support_data), support_label), var_list=model.trainable_variables)
+                            
+                            lr_inner = 0.3
+                            step = 0
+                            for j, layer in enumerate(new_model.layers):
+                                if hasattr(layer, 'kernel'):
+                                    updated_kernel = tf.subtract(new_model.layers[j].kernel,
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.kernel.assign(updated_kernel)
+                                    if hasattr(layer, 'bias'):
+                                        updated_bias = tf.subtract(new_model.layers[j].bias,
+                                                                tf.multiply(lr_inner, gradients[step+1]))
+                                        layer.bias.assign(updated_bias)
+                                        step += 2
+                                elif isinstance(layer, keras.layers.BatchNormalization):
+                                    gamma, beta = layer.trainable_variables
+                                    updated_gamma = tf.subtract(gamma, 
+                                                                tf.multiply(lr_inner, gradients[step]))
+                                    layer.gamma.assign(updated_gamma)
+                                    step += 1
+
+                                    updated_beta = tf.subtract(beta, 
+                                                            tf.multiply(lr_inner, gradients[step]))
+                                    layer.beta.assign(updated_beta)
+                                    step += 1
 
                         query_logits = new_model(query_data)
                         query_loss = compute_loss(query_logits, query_label)
@@ -620,13 +678,18 @@ def main():
                 for user_id, values in x_test.items():
                     test_data, test_label = load_test_data(x_test[user_id], y_test[user_id])
 
-                    for step in tqdm(range(UPDATE_STEP_TEST)):
+                    for update_step in tqdm(range(UPDATE_STEP_TEST)):
                         # Split test data into support and query sets
                         # support_data, support_label, query_data, query_label = split_test_data(test_data, test_label, split_ratio=0.05)
                         support_data, support_label, query_data, query_label = split_test_data(test_data, test_label)
                         if architecture == 'mlplstm':
                             support_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in support_data]
                             query_data = [x.reshape((x.shape[0], 2, round(x.shape[1] / 2), 1)) for x in query_data]
+
+                        support_data = np_to_tensor(support_data) 
+                        support_label = np_to_tensor(support_label) 
+                        query_data = np_to_tensor(query_data) 
+                        query_label = np_to_tensor(query_label)
                         
                         # Meta-testing
                         with tf.GradientTape(persistent=True) as inner_tape:
@@ -640,11 +703,36 @@ def main():
                         gradients = inner_tape.gradient(support_loss, test_model.trainable_variables)
                         # optimizer.apply_gradients(zip(gradients, model.trainable_variables))
                         # maml.optimizer.apply_gradients(zip(gradients, model.trainable_variables))
-                        test_maml.optimizer.apply_gradients(zip(gradients, test_model.trainable_variables))
+                        # test_maml.optimizer.apply_gradients(zip(gradients, test_model.trainable_variables))
                         # maml.meta_optimizer.minimize(lambda: compute_loss(model(support_data), support_label), var_list=model.trainable_variables)
 
+                        lr_inner = 0.3
+                        step = 0
+                        for j, layer in enumerate(test_model.layers):
+                            if hasattr(layer, 'kernel'):
+                                updated_kernel = tf.subtract(test_model.layers[j].kernel,
+                                                            tf.multiply(lr_inner, gradients[step]))
+                                layer.kernel.assign(updated_kernel)
+                                if hasattr(layer, 'bias'):
+                                    updated_bias = tf.subtract(test_model.layers[j].bias,
+                                                            tf.multiply(lr_inner, gradients[step+1]))
+                                    layer.bias.assign(updated_bias)
+                                    step += 2
+                            elif isinstance(layer, keras.layers.BatchNormalization):
+                                gamma, beta = layer.trainable_variables
+                                updated_gamma = tf.subtract(gamma, 
+                                                            tf.multiply(lr_inner, gradients[step]))
+                                layer.gamma.assign(updated_gamma)
+                                step += 1
+
+                                updated_beta = tf.subtract(beta, 
+                                                        tf.multiply(lr_inner, gradients[step]))
+                                layer.beta.assign(updated_beta)
+                                step += 1
+
                     # Evaluate on query set
-                    query_logits = model(query_data)
+                    # query_logits = model(query_data)
+                    query_logits = test_model(query_data)
                     query_loss = compute_loss(query_logits, query_label)
                     query_accuracy = compute_accuracy(query_logits, query_label)
                     f1_score, auroc = compute_performance(query_logits, query_label)
