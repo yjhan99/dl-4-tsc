@@ -1,11 +1,11 @@
 import sys
 
 from experiment.hyperparametertuning import HyperparameterTuning
-from experiment.wesadexperiment_cluster import WesadExperimentNFold
-from experiment.kemoworkexperiment_cluster import KEmoWorkExperimentNFold
-from experiment.caseexperiment_cluster import CaseExperimentNFold
-from experiment.kemoconexperiment_cluster import KEmoConExperimentNFold
-from experiment.ascertainexperiment_cluster import ASCERTAINExperimentNFold
+from experiment.wesadexperiment import WesadExperimentNFold
+from experiment.kemoworkexperiment import KEmoWorkExperimentNFold
+from experiment.caseexperiment import CaseExperimentNFold
+from experiment.kemoconexperiment import KEmoConExperimentNFold
+from experiment.ascertainexperiment import ASCERTAINExperimentNFold
 from utils.loggerwrapper import GLOBAL_LOGGER
 from utils.utils import set_available_gpus
 

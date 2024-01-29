@@ -9,14 +9,13 @@ from keras.optimizers.legacy import Adam
 
 from multimodal_classfiers.hyperparameters import Hyperparameters
 from utils.loggerwrapper import GLOBAL_LOGGER
-from utils.utils import save_logs
+from utils.utils import save_logs, save_logs_without_val
 
 import random, os
 from collections import defaultdict
 
 
 def select_data(samples_per_label, y_list, y_array, x): # samples_per_label = Number of samples to pick from each label
-    # Create a dictionary to store indices for each label in y
     indices_by_label = defaultdict(list)
     for i, label in enumerate(y_list):
         indices_by_label[label].append(i)
@@ -54,20 +53,20 @@ def select_data(samples_per_label, y_list, y_array, x): # samples_per_label = Nu
 
 
 class Classifier(ABC):
-    def __init__(self, output_directory, output_mtl_directory, input_shapes, nb_classes, verbose=True, hyperparameters=None,
+    def __init__(self, output_directory, output_tuning_directory, input_shapes, nb_classes, verbose=True, hyperparameters=None,
                  model_init=None):
+        
         self.output_directory = output_directory
-        self.output_mtl_directory = output_mtl_directory
+        self.output_tuning_directory = output_tuning_directory
         self.verbose = verbose
         self.callbacks = []
-        self.callbacks_mtl = []
+        self.callbacks_tuning = []
         self.hyperparameters = hyperparameters
 
         self.model = model_init if model_init else self.build_model(input_shapes, nb_classes, hyperparameters)
         if verbose:
             self.model.summary()
         self.create_callbacks()
-        self.create_callbacks_mtl()
 
     @abstractmethod
     def build_model(self, input_shapes, nb_classes, hyperparameters):
@@ -83,35 +82,29 @@ class Classifier(ABC):
                                       patience=self.hyperparameters.reduce_lr_patience)
         self.callbacks.append(reduce_lr)
 
-        early_stopping = EarlyStopping(patience=7)
-        self.callbacks.append(early_stopping)
-
-    def create_callbacks_mtl(self):
-        file_path = self.output_mtl_directory + 'best_model.hdf5'
-        model_checkpoint = ModelCheckpoint(filepath=file_path, monitor='val_loss', save_best_only=True,
-                                           save_weights_only=True)
-        self.callbacks_mtl.append(model_checkpoint)
-
-        # reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=self.hyperparameters.reduce_lr_factor,
-        #                               patience=self.hyperparameters.reduce_lr_patience)
-        # self.callbacks.append(reduce_lr)
-
-        early_stopping = EarlyStopping(patience=7)
+        early_stopping = EarlyStopping(patience=5)
         self.callbacks.append(early_stopping)
 
     def get_optimizer(self):
         return Adam(lr=self.hyperparameters.lr, decay=self.hyperparameters.decay)
 
-    def fit_mtl(self, x_train, y_train, x_val, y_val, y_true, x_cluster, y_cluster, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True):
+    def fit_finetuning(self, x_train, y_train, x_val, y_val, y_true, y_test_tuning, batch_size=16, nb_epochs=5000, x_test=None, shuffle=True):
         mini_batch_size = int(min(x_train[0].shape[0] / 10, batch_size))
+
+        ft_percentage = 50
+
+        selected_x, leftover_x, selected_y_array, selected_y_list, leftover_y_array, leftover_y_list = select_data(ft_percentage, y_true, y_test_tuning, x_test)
+        # print("-------------------------------------------------",x_train.shape)
+        for i, x in enumerate(selected_x):
+            x_train[i] = np.concatenate((x,x_train[i]), axis=0)
+        
+        y_train = np.concatenate((selected_y_array,y_train), axis=0)
 
         GLOBAL_LOGGER.info("Fitting model")
 
         start_time = time.time()
 
-        for layer in self.model.layers[:-2]:
-            layer.trainable = True
-        self.model.layers[-2].trainable = False
+        print("pretraining")
 
         hist = self.model.fit(x_train, y_train, batch_size=mini_batch_size, epochs=nb_epochs, verbose=self.verbose,
                             validation_data=(x_val, y_val), callbacks=self.callbacks, shuffle=shuffle)
@@ -121,41 +114,43 @@ class Classifier(ABC):
         self.model.load_weights(self.output_directory + 'best_model.hdf5')
 
         y_pred_probabilities = self.model.predict(x_test)
+        # y_pred_probabilities = self.model.predict(leftover_x)
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
         save_logs(self.output_directory, hist, y_pred, y_pred_probabilities, y_true, duration)
+        # save_logs(self.output_directory, hist, y_pred, y_pred_probabilities, leftover_y_list, duration)
+            
+        self.model.load_weights(self.output_directory + 'best_model.hdf5')
 
-        GLOBAL_LOGGER.info("Multi task learning")
+        GLOBAL_LOGGER.info("Fine tuning")
 
         start_time = time.time()
 
-        for layer in self.model.layers[:-2]:
-            layer.trainable = False
-        self.model.layers[-2].trainable = True
+        # for layer in self.model.layers[:-1]:
+        #     layer.trainable = False
+        #     # layer.trainable = True
+        # self.model.layers[-1].trainable = True
 
         self.model.compile(loss='categorical_crossentropy', optimizer=Adam(1e-9), metrics=['accuracy'])
+        
+        
 
-        mini_batch_size = int(min(x_cluster[0].shape[0] / 10, batch_size))
+        # # mini_batch_size = int(min(x_train_tuning[0].shape[0] / 10, batch_size))
         # mini_batch_size=2
         
-        hist_mtl = self.model.fit(x_cluster, y_cluster, batch_size=mini_batch_size, epochs=nb_epochs+10,
-                                   initial_epoch=hist.epoch[-1], verbose=self.verbose, callbacks=self.callbacks_mtl, 
-                                   validation_split=0.2, shuffle=shuffle)
+        # hist_tune = self.model.fit(selected_x, selected_y_array, batch_size=mini_batch_size, epochs=nb_epochs+10,
+        #                         initial_epoch=hist.epoch[-1], verbose=self.verbose, shuffle=shuffle)
         
         duration = time.time() - start_time
-
-        self.model.summary()
         
-        GLOBAL_LOGGER.info(f"Loading weights and predicting")
+        GLOBAL_LOGGER.info(f"Predicting")
         
-        self.model.load_weights(self.output_mtl_directory + 'best_model.hdf5')
-
-        y_pred_probabilities = self.model.predict(x_test)
+        y_pred_probabilities = self.model.predict(leftover_x)
 
         y_pred = np.argmax(y_pred_probabilities, axis=1)
 
-        return save_logs(self.output_mtl_directory, hist_mtl, y_pred, y_pred_probabilities, y_true, duration)
+        save_logs_without_val(self.output_tuning_directory+str(ft_percentage), hist, y_pred, y_pred_probabilities, leftover_y_list, duration)
 
 
 def get_multipliers(channels_no, hyperparameters: Hyperparameters):
